@@ -43,8 +43,6 @@ class MapDoublyLinkedList:
         tail.next = new_node
         return head, new_node
 
-
-
 class Character:
     def __init__(self, health, stamina, mana, strength, stealth, intelligence):
         self.health = health
@@ -84,14 +82,10 @@ class Character:
         for i, target in enumerate(target_list):
             print(f"Target {i+1}: Health={target.health}, Stamina={target.stamina}, Mana={target.mana}")
 
-
-
 class Inventory:
     def __init__(self, character):
         self.item_array = []
         self.character = character
-
-        
 
     def add_item(self, item_code, item_name, item_statistics):
         #overencumber
@@ -102,28 +96,15 @@ class Inventory:
             item = {"item_code": item_code, "item_name": item_name, "item_statistics": {"damage": item_statistics[0], "durability": item_statistics[1]}}
             self.item_array.append(item)
             return True
-
-    def damage_retrieve(self, selected_item):
-        return self.item_array[int(selected_item)]["item_statistics"]["damage"]
     
-    def item_retrieve(self, selected_item):
-        return self.item_array[int(selected_item)]
-
-
     def drop_item(self, index):
         if 0 <= index < len(self.item_array):
             return self.item_array.pop(index)
-
+        
     def display_inventory(self):
         for item in self.item_array:
             print(item["item_name"])
             print(item["item_statistics"]["damage"])
-
-    def loot_drop(self, item, original_array):
-        self.world_array.append(item)
-        original_array.pop(item)
-
-        print(self.world_array)
 
     def durability(self, selected_item):
         self.item_array[int(selected_item)]["item_statistics"]["durability"] -= 1
@@ -134,6 +115,16 @@ class Inventory:
                 item["item_statistics"]["damage"] = 1
                 item["item_statistics"]["durability"] = 0
 
+    def damage_retrieve(self, selected_item):
+        return self.item_array[int(selected_item)]["item_statistics"]["damage"]
+    
+    def item_retrieve(self, selected_item):
+        return self.item_array[int(selected_item)]
+
+    def loot_drop(self, item, original_array):
+        self.world_array.append(item)
+        original_array.pop(item)
+        print(self.world_array)
 
 
 # class Weapons:
@@ -145,6 +136,51 @@ class Inventory:
 #         self.weapon_array.add_item("orc_axe_1", "Orc Axe", [4, 1])
 
 class Event:
+    def random_event():
+        event_array = [Event.orc_attack, Event.chest_encounter, None]
+        return random.choice(event_array)
+    
+    def trigger_event(node):
+        if node == None:
+            return
+        else:
+            if node.event:
+                if node.event == Event.chest_encounter:
+                    node.event(node, player_inventory, player)
+                else:
+                    node.event(node)
+
+    def display_node_event(node):
+        events = []
+        event_index = 0
+        
+        if node.event == Event.orc_attack and node.event_completed == False:
+            event_index += 1
+            print(event_index, " orc attack")
+            events.append(Event.orc_attack)
+        elif node.event == Event.chest_encounter and node.event_completed == False:
+            event_index += 1
+            print(event_index, " chest encounter")
+            events.append(Event.chest_encounter)
+        if events:
+            event_choice = input("Choose event number (or type 'back' to leave): ")
+            
+            if event_choice.isdigit():
+                selected_index = int(event_choice) - 1
+                if 0 <= selected_index < len(events):
+                    if events[selected_index] == Event.chest_encounter:
+                        events[selected_index](node, player_inventory, player)
+                    else:
+                        events[selected_index](node)
+                else:
+                    print("Invalid selection")
+            elif event_choice == 'back':
+                return
+            else:
+                print("Invalid input, please enter a valid number or 'back'.")
+        else:
+            print("All events in this node are complete.")
+
     def select_target(node):
         Character.display_targets(node.orc_character_list, node.orc_character_list)
         print("Select Target:\n")
@@ -162,7 +198,6 @@ class Event:
 
             node.orc_character_list = []
             node.orc_inventory_list = []
-
         if node.event_completed == False and not node.orc_character_list:
             for _ in range (random.randint(1,3)):
                 orc = Character(random.randint(10,15), 75, 50,3,2,3)
@@ -174,7 +209,6 @@ class Event:
         if node.orc_character_list:
             Character.display_targets(node.orc_character_list, node.orc_character_list)
             event_choice = input('\n1. Attack\n2. Flee')
-            
             if event_choice == '1':
                 while node.orc_character_list:
                     Character.display_targets(node.orc_character_list, node.orc_character_list)
@@ -183,29 +217,24 @@ class Event:
                     selected_target = input_validation(node.orc_character_list, selected_target)
                     if selected_target == "back":
                         Event.orc_attack(node)
-
+                        return
                     print("Select Item For Attack:\n")
                     player_inventory.display_inventory()
                     selected_item = input()
                     selected_item = input_validation(player_inventory.item_array, selected_item)
                     if selected_item == "back":
                         Event.select_target(node)
-                
+                        return
                     player.attack(node.orc_character_list[selected_target], selected_item, player_inventory)
-
-                    print("Orc", selected_target+1, " vs human Did damage leaving orc with: ", f"{node.orc_character_list[selected_target].health}")
-
+                    print("Orc", selected_target+1, player_name," Did damage leaving orc with: ", f"{node.orc_character_list[selected_target].health}")
                     if node.orc_character_list[selected_target].health <= 0:
                         
                         orc_inventory = node.orc_inventory_list[selected_target]
                         while orc_inventory.item_array:
                             dropped_item = orc_inventory.drop_item(0)
                             loot.add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"]])
-
-
                         node.orc_character_list.pop(selected_target)
                         node.orc_inventory_list.pop(selected_target)
-                        
                         print("\n")
                         node.node_loot = loot
                 player_life_check()
@@ -213,11 +242,8 @@ class Event:
 
             elif event_choice == '2':
                 direction = input ("forward=f ||| backward=b")
-
                 while direction != 'f' and direction != 'b':
                     direction = input ("forward=f ||| backward=b")
-
-
                 if direction == 'back':
                     Event.orc_attack(node)
                 flee_chance = 1 + player.stealth
@@ -231,7 +257,6 @@ class Event:
                 else:
                     print("Flee Failed")
                     Event.orc_attack(node)
-
             else:
                 print("invalid att/flee input")
                 Event.orc_attack(node)
@@ -248,9 +273,9 @@ class Event:
                 player_inventory.add_item(retrieved_loot["item_code"], retrieved_loot["item_name"], [retrieved_loot["item_statistics"]["damage"], retrieved_loot["item_statistics"]["durability"]])
                 node.node_loot.drop_item(selected_loot)
             else:
-                print("overecnumbered")
+                print("You are Over-Encumbered")
                 player_inventory.display_inventory()
-                player_drop_select = input("select item to drop (or n to not drop any):")
+                player_drop_select = input("Select Ttem to Drop (n to exit):")
                 player_drop_select = input_validation(player_inventory.item_array, player_drop_select)
                 if player_drop_select == 'n':
                     break
@@ -259,8 +284,6 @@ class Event:
             if not node.node_loot.item_array:
                 node.event_completed = True
                 break
-                
-        
         
         else:
             return
@@ -271,61 +294,37 @@ class Event:
             if chest_input == 'y':
                 inventory_capacity = character.inventory_attributes()
                 if len(inventory_array.item_array) >= inventory_capacity:
-                    print("Overencumbered, would you like to remove an item to take the item from the chest?")
-                    return
+                    print("Unable to add item, You Are Over-Encumbered")
+                    return node
                 else:
                     inventory_array.add_item("diamondsword1", "Diamond Sword", [1, 2])
                     node.event_completed = True
                     print("you got")
             elif chest_input == 'n':
-                print("You did not open the chest")
+                print("You Did Not Open The Chest")
                 return
             else:
-                print("invalid input")
+                print("Invalid Input")
                 Event.chest_encounter(node, inventory_array, character)
         else:
             return
 
-
-    def random_event():
-        event_array = [Event.orc_attack, Event.chest_encounter, None]
-        return random.choice(event_array)
-    
-    def trigger_event(node):
-        if node == None:
-            return
-        else:
-            if node.event:
-                if node.event == Event.chest_encounter:
-                    node.event(node, player_inventory, player)
-                else:
-                    node.event(node)
-
-
 def input_validation(list, selection):
     if selection == 'back':
         return selection
-    
     try:
         if selection == '':
             selection = len(list) + 1
         if 1 > int(selection) or len(list) < int(selection) or selection == str or selection == '' or selection == None:
             raise ValueError
     except ValueError:
-        return input_validation(list, input("Invalid select out of range"))
+        return input_validation(list, input("Invalid Input"))
     return int(selection) -1
-
-
 
 def player_life_check():
     if player.health <= 0:
         print("Game Over")
         exit()
-
-def enemy_life_check():
-    if player.health <= 0:
-        pass
-
 
 def status():
     print(player_name + "'s Status:")
@@ -338,102 +337,59 @@ def move(player_node, direction):
         if player_node.next:
             return player_node.next
         else:
-            print("invalid, no spavce in front")
+            print("No Space in Front")
             return player_node
-
     elif direction == 'b':
         if player_node.prev:
             return player_node.prev
         else:
-            print("invalid, no spavce behind")
+            print("Nno Space Behind")
             return player_node
-        
     else:
-        print("invalid input")
+        print("Invalid Input")
         return player_node
        
-
-#map gen
+#map generation
 head = tail = MapDoublyNode(1, Event.random_event())
-
-#start at first node
 player_position = head
-
 for i in range (2, 11):
     head, tail = MapDoublyLinkedList.insert_at_end(head, tail, i, Event.random_event())
-    MapDoublyLinkedList.display(head)
-    MapDoublyLinkedList.display_event(head)
-
-
-
-
-
-
-
-
-player = Character(100, 75, 50,0,10,3)
-orc = Character(100, 75, 50,1,2,3)
-
+world = Character(None, None, None, 1000, None, None)
+loot = Inventory(world)
+player = Character(100, 75, 50,1110,10,3)
 player_inventory = Inventory(player)
-
 player_inventory.add_item("unarmed", "Unarmed", [0, float('inf')])
-
-
-
-
-
-menu_choice = input("Enter Any Key to Begin New Game")
-
-player_name = input("Enter Name:")
-
-
-print("\n")
-# Event.chest_encounter(player_position, player_inventory, player)
-# Event.chest_encounter(player_position, player_inventory, player)
-# Event.chest_encounter(player_position, player_inventory, player)
-# Event.chest_encounter(player_position, player_inventory, player)
-# Event.chest_encounter(player_position, player_inventory, player)
-# Event.chest_encounter(player_position, player_inventory, player)
-# Event.chest_encounter(player_position, player_inventory, player)
-# Event.chest_encounter(player_position, player_inventory, player)
-print("\n")
-
-# Event.orc_attack(player_position)
+menu_choice = input("\nEnter Any Key to Begin New Game\n")
+player_name = input("\nEnter Name: ")
+print('\n')
 Event.trigger_event(player_position)
-
-
-
-
+if player_position.flee_occur:
+            player_position = move(player_position, player_position.flee_direction)
 
 while menu_choice != 'quit':
-
-    menu_choice = input("\n1. Player Status\n2. Surrounding Area\n3. Move\n4. Rest\nquit. Exit\n6. Check Inventory\n\n")
+    menu_choice = input("\n1. Surrounding Area\n3. Move\n4. Rest\nquit. Exit\n6. Check Inventory\n7. player status\n\n")
 
     if menu_choice == '1':
-        status()
-
-    elif menu_choice == '2':
         print(player_position)
-        
-
+        Event.display_node_event(player_position)
     elif menu_choice == '3':
-        direction = input ("forward=f ||| backward=b")
-
+        direction = input ("Forward (f) | Backward (b)")
         player_position = move(player_position, direction)
         Event.trigger_event(player_position)
         if player_position.flee_occur:
-            player_position =move(player_position, player_position.flee_direction)
-        
-
-
+            player_position = move(player_position, player_position.flee_direction)
+            Event.trigger_event(player_position)
     elif menu_choice == '4':
         player.inventory_attributes()
-
     elif menu_choice == '5':
         pass
-
     elif menu_choice == '6':
         player_inventory.display_inventory()
-
+        player_drop_select = input("Select Item To Drop:\n")
+        player_drop_select = input_validation(player_inventory.item_array, player_drop_select)
+        if player_drop_select == 'n':
+            break
+        player_drop = player_inventory.drop_item(int(player_drop_select))
+        loot.add_item(player_drop["item_code"], player_drop["item_name"], [player_drop["item_statistics"]["damage"], player_drop["item_statistics"]["durability"]])
     elif menu_choice == '7':
-        pass
+        status()
