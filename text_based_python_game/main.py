@@ -3,10 +3,11 @@
 import random
 
 class MapDoublyNode:
-    def __init__(self, val, event = None, event_completed = False, flee_occur = False, flee_direction = None, node_loot = None, next = None, prev = None):
+    def __init__(self, val, event = None, event_completed = False, event_looted = False, flee_occur = False, flee_direction = None, node_loot = None, next = None, prev = None):
         self.val = val
         self.event = event
         self.event_completed = event_completed
+        self.event_looted = event_looted
         self.flee_occur = flee_occur
         self.flee_direction = flee_direction
         self.node_loot = node_loot
@@ -44,18 +45,18 @@ class MapDoublyLinkedList:
         return head, new_node
 
 class Character:
-    def __init__(self, health, stamina, mana, strength, stealth, intelligence):
+    def __init__(self, health, stamina, mana, strength, agility, intelligence):
         self.health = health
         self.stamina = stamina
         self.mana = mana
         self.strength = strength
-        self.stealth = stealth
+        self.agility = agility
         self.intelligence = intelligence
 
     def strength_attributes(self):
         pass
 
-    def stealth_attributes(self):
+    def agility_attributes(self):
         pass
 
     def intelligence_attributes(self):
@@ -89,7 +90,7 @@ class Inventory:
 
     def add_item(self, item_code, item_name, item_statistics):
         #overencumber
-        inventory_capacity = player.inventory_attributes()
+        inventory_capacity = self.character.inventory_attributes()
         if len(self.item_array) >= inventory_capacity:
             return False
         else:
@@ -119,13 +120,15 @@ class Inventory:
         return self.item_array[int(selected_item)]["item_statistics"]["damage"]
     
     def item_retrieve(self, selected_item):
-        return self.item_array[int(selected_item)]
+        if 0 <= selected_item < len(self.item_array):
+            return self.item_array[int(selected_item)]
+        else:
+            return
 
     def loot_drop(self, item, original_array):
         self.world_array.append(item)
         original_array.pop(item)
         print(self.world_array)
-
 
 # class Weapons:
 #     def __init__(self):
@@ -140,23 +143,27 @@ class Event:
         event_array = [Event.orc_attack, Event.chest_encounter, None]
         return random.choice(event_array)
     
-    def trigger_event(node):
+    def trigger_event(node, game):
         if node == None:
             return
         else:
             if node.event:
                 if node.event == Event.chest_encounter:
-                    node.event(node, player_inventory, player)
+                    node.event(node, game.player_inventory, game.player)
                 else:
-                    node.event(node)
+                    node.event(node, game)
 
-    def display_node_event(node):
+    def display_node_event(node, game):
         events = []
         event_index = 0
         
         if node.event == Event.orc_attack and node.event_completed == False:
             event_index += 1
             print(event_index, " orc attack")
+            events.append(Event.orc_attack)
+        elif node.event == Event.orc_attack and node.event_looted== False:
+            event_index += 1
+            print(event_index, " orc loot")
             events.append(Event.orc_attack)
         elif node.event == Event.chest_encounter and node.event_completed == False:
             event_index += 1
@@ -169,9 +176,9 @@ class Event:
                 selected_index = int(event_choice) - 1
                 if 0 <= selected_index < len(events):
                     if events[selected_index] == Event.chest_encounter:
-                        events[selected_index](node, player_inventory, player)
+                        events[selected_index](node, Game.player_inventory, Game.player)
                     else:
-                        events[selected_index](node)
+                        events[selected_index](node, game)
                 else:
                     print("Invalid selection")
             elif event_choice == 'back':
@@ -181,15 +188,15 @@ class Event:
         else:
             print("All events in this node are complete.")
 
-    def select_target(node):
+    def select_target(node, game):
         Character.display_targets(node.orc_character_list, node.orc_character_list)
         print("Select Target:\n")
         selected_target = input()
-        selected_target = input_validation(node.orc_character_list, selected_target)
+        selected_target = Game.input_validation(node.orc_character_list, selected_target)
         if selected_target == "back":
-            Event.orc_attack(node)
+            Event.orc_attack(node, game)
 
-    def orc_attack(node):
+    def orc_attack(node, game):
         world = Character(None, None, None, 1000, None, None)
         loot = Inventory(world)
 
@@ -214,19 +221,19 @@ class Event:
                     Character.display_targets(node.orc_character_list, node.orc_character_list)
                     print("Select Target:\n")
                     selected_target = input()
-                    selected_target = input_validation(node.orc_character_list, selected_target)
+                    selected_target = Game.input_validation(node.orc_character_list, selected_target)
                     if selected_target == "back":
-                        Event.orc_attack(node)
+                        Event.orc_attack(node, game)
                         return
                     print("Select Item For Attack:\n")
-                    player_inventory.display_inventory()
+                    game.player_inventory.display_inventory()
                     selected_item = input()
-                    selected_item = input_validation(player_inventory.item_array, selected_item)
+                    selected_item = Game.input_validation(game.player_inventory.item_array, selected_item)
                     if selected_item == "back":
-                        Event.select_target(node)
+                        Event.select_target(node, game)
                         return
-                    player.attack(node.orc_character_list[selected_target], selected_item, player_inventory)
-                    print("Orc", selected_target+1, player_name," Did damage leaving orc with: ", f"{node.orc_character_list[selected_target].health}")
+                    game.player.attack(node.orc_character_list[selected_target], selected_item, game.player_inventory)
+                    print("Orc", selected_target+1, game.player_name," Did damage leaving orc with: ", f"{node.orc_character_list[selected_target].health}")
                     if node.orc_character_list[selected_target].health <= 0:
                         
                         orc_inventory = node.orc_inventory_list[selected_target]
@@ -237,7 +244,7 @@ class Event:
                         node.orc_inventory_list.pop(selected_target)
                         print("\n")
                         node.node_loot = loot
-                player_life_check()
+                game.player_life_check()
                 node.event_completed = True
 
             elif event_choice == '2':
@@ -245,8 +252,8 @@ class Event:
                 while direction != 'f' and direction != 'b':
                     direction = input ("forward=f ||| backward=b")
                 if direction == 'back':
-                    Event.orc_attack(node)
-                flee_chance = 1 + player.stealth
+                    Event.orc_attack(node, game)
+                flee_chance = 1 + game.player.agility
                 flee_success = random.randint(1,10)
                 print("test")
                 if flee_chance >= flee_success:
@@ -256,33 +263,33 @@ class Event:
                     return
                 else:
                     print("Flee Failed")
-                    Event.orc_attack(node)
+                    Event.orc_attack(node, game)
             else:
                 print("invalid att/flee input")
-                Event.orc_attack(node)
+                Event.orc_attack(node, game)
         
         while node.node_loot:
             node.node_loot.display_inventory()
             print("Select Items from Loot to take")
             selected_loot = input()
-            selected_loot = input_validation(node.node_loot.item_array, selected_loot)
+            selected_loot = Game.input_validation(node.node_loot.item_array, selected_loot)
             if selected_loot == "back":
                 return node
             retrieved_loot = loot.item_retrieve(selected_loot)
-            if player_inventory.add_item(retrieved_loot["item_code"], retrieved_loot["item_name"], [retrieved_loot["item_statistics"]["damage"], retrieved_loot["item_statistics"]["durability"]]) == True:
-                player_inventory.add_item(retrieved_loot["item_code"], retrieved_loot["item_name"], [retrieved_loot["item_statistics"]["damage"], retrieved_loot["item_statistics"]["durability"]])
+            if game.player_inventory.add_item(retrieved_loot["item_code"], retrieved_loot["item_name"], [retrieved_loot["item_statistics"]["damage"], retrieved_loot["item_statistics"]["durability"]]) == True:
                 node.node_loot.drop_item(selected_loot)
             else:
                 print("You are Over-Encumbered")
-                player_inventory.display_inventory()
+                game.player_inventory.display_inventory()
                 player_drop_select = input("Select Ttem to Drop (n to exit):")
-                player_drop_select = input_validation(player_inventory.item_array, player_drop_select)
+                player_drop_select = Game.input_validation(game.player_inventory.item_array, player_drop_select)
                 if player_drop_select == 'n':
                     break
-                player_drop = player_inventory.drop_item(int(player_drop_select))
+                player_drop = game.player_inventory.drop_item(int(player_drop_select))
                 loot.add_item(player_drop["item_code"], player_drop["item_name"], [player_drop["item_statistics"]["damage"], player_drop["item_statistics"]["durability"]])
             if not node.node_loot.item_array:
                 node.event_completed = True
+                node.event_looted = True
                 break
         
         else:
@@ -308,88 +315,112 @@ class Event:
                 Event.chest_encounter(node, inventory_array, character)
         else:
             return
+        
+class Game:
+    def __init__(self):
+        self.head, self.tail = self.generate_world()
+        self.player_position = self.head
+        self.world = Character(None, None, None, 1000, None, None)
+        self.loot = Inventory(self.world)
+        self.player = Character(100, 75, 50, 1110, 10, 3)
+        self.player_inventory = Inventory(self.player)
+        self.player_inventory.add_item("unarmed", "Unarmed", [0, float('inf')])
+        self.menu_choice = ''
+        self.player_name = ''
 
-def input_validation(list, selection):
-    if selection == 'back':
-        return selection
-    try:
-        if selection == '':
-            selection = len(list) + 1
-        if 1 > int(selection) or len(list) < int(selection) or selection == str or selection == '' or selection == None:
-            raise ValueError
-    except ValueError:
-        return input_validation(list, input("Invalid Input"))
-    return int(selection) -1
+    def generate_world(self):
+        head = tail = MapDoublyNode(1, Event.random_event())
+        for i in range (2, 11):
+            head, tail = MapDoublyLinkedList.insert_at_end(head, tail, i, Event.random_event())
+        return head, tail
 
-def player_life_check():
-    if player.health <= 0:
-        print("Game Over")
-        exit()
+    def start_game(self):
+        input("\nEnter Any Key to Begin New Game\n")
+        self.player_name = input("\nEnter Name: ")
+        print('\n')
+        Event.trigger_event(self.player_position, self)
+        if self.player_position.flee_occur:
+                    self.player_position = Game.move(self.player_position, self.player_position.flee_direction)
 
-def status():
-    print(player_name + "'s Status:")
-    print(f"{player.health}")
-    print(f"{player.stamina}")
-    print(f"{player.mana}")
+    def menu(self):
+        while self.menu_choice != 'quit':
+            self.menu_choice = input("\n1. Surrounding Area\n2. Move\n3. Rest\nquit. Exit\n4. Check Inventory\n5. player status\n\n")
 
-def move(player_node, direction):
-    if direction == 'f':
-        if player_node.next:
-            return player_node.next
-        else:
-            print("No Space in Front")
+            if self.menu_choice == '1':
+                print(self.player_position)
+                Event.display_node_event(self.player_position, self)
+            elif self.menu_choice == '2':
+                direction = input ("Forward (f) | Backward (b) | Cancel (back)")
+                self.player_position = Game.move(self.player_position, direction)
+                Event.trigger_event(self.player_position, self)
+                if self.player_position.flee_occur:
+                    self.player_position = Game.move(self.player_position, self.player_position.flee_direction)
+                    Event.trigger_event(self.player_position, self)
+            elif self.menu_choice == '3':
+                pass
+            elif self.menu_choice == '4':
+                Game.inventory_interact(self, self.player_position)
+            elif self.menu_choice == '5':
+                Game.status()
+
+    def move(player_node, direction):
+        if direction == 'f':
+            if player_node.next:
+                return player_node.next
+            else:
+                print("No Space in Front")
+                return player_node
+        elif direction == 'b':
+            if player_node.prev:
+                return player_node.prev
+            else:
+                print("No Space Behind")
+                return player_node
+        elif direction == 'back':
             return player_node
-    elif direction == 'b':
-        if player_node.prev:
-            return player_node.prev
         else:
-            print("Nno Space Behind")
+            print("Invalid Input")
             return player_node
-    else:
-        print("Invalid Input")
-        return player_node
-       
-#map generation
-head = tail = MapDoublyNode(1, Event.random_event())
-player_position = head
-for i in range (2, 11):
-    head, tail = MapDoublyLinkedList.insert_at_end(head, tail, i, Event.random_event())
-world = Character(None, None, None, 1000, None, None)
-loot = Inventory(world)
-player = Character(100, 75, 50,1110,10,3)
-player_inventory = Inventory(player)
-player_inventory.add_item("unarmed", "Unarmed", [0, float('inf')])
-menu_choice = input("\nEnter Any Key to Begin New Game\n")
-player_name = input("\nEnter Name: ")
-print('\n')
-Event.trigger_event(player_position)
-if player_position.flee_occur:
-            player_position = move(player_position, player_position.flee_direction)
 
-while menu_choice != 'quit':
-    menu_choice = input("\n1. Surrounding Area\n3. Move\n4. Rest\nquit. Exit\n6. Check Inventory\n7. player status\n\n")
+    def input_validation(list, selection):
+        if selection == 'back':
+            return selection
+        try:
+            if selection == '':
+                selection = len(list) + 1
+            if 1 > int(selection) or len(list) < int(selection) or selection == str or selection == '' or selection == None:
+                raise ValueError
+        except ValueError:
+            return Game.input_validation(list, input("Invalid Input"))
+        return int(selection) -1
 
-    if menu_choice == '1':
-        print(player_position)
-        Event.display_node_event(player_position)
-    elif menu_choice == '3':
-        direction = input ("Forward (f) | Backward (b)")
-        player_position = move(player_position, direction)
-        Event.trigger_event(player_position)
-        if player_position.flee_occur:
-            player_position = move(player_position, player_position.flee_direction)
-            Event.trigger_event(player_position)
-    elif menu_choice == '4':
-        player.inventory_attributes()
-    elif menu_choice == '5':
-        pass
-    elif menu_choice == '6':
-        player_inventory.display_inventory()
-        player_drop_select = input("Select Item To Drop:\n")
-        player_drop_select = input_validation(player_inventory.item_array, player_drop_select)
-        if player_drop_select == 'n':
-            break
-        player_drop = player_inventory.drop_item(int(player_drop_select))
-        loot.add_item(player_drop["item_code"], player_drop["item_name"], [player_drop["item_statistics"]["damage"], player_drop["item_statistics"]["durability"]])
-    elif menu_choice == '7':
-        status()
+    def player_life_check(self):
+        if self.player.health <= 0:
+            print("Game Over")
+            exit()
+
+    def status(self):
+        print(self.player_name + "'s Status:")
+        print(f"{self.player.health}")
+        print(f"{self.player.stamina}")
+        print(f"{self.player.mana}")
+    
+    def inventory_interact(self, node):
+        self.player_inventory.display_inventory()
+        drop_select = input("Select Item To Drop:\n")
+        if drop_select == 'n':
+            return
+        drop_select = Game.input_validation(self.player_inventory.item_array, drop_select)
+        dropped_item = self.player_inventory.drop_item(int(drop_select))
+        if node.node_loot is None:
+            node.node_loot = Inventory(self.world)
+        node.node_loot.add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"]])
+        node.node_loot.display_inventory()
+
+def main():
+    game = Game()
+    game.generate_world()
+    game.start_game()
+    game.menu()
+
+main()
