@@ -9,6 +9,7 @@ class MapDoublyNode:
     def __init__(self, val, event = None, event_completed = False, event_looted = False, flee_occur = False, flee_direction = None, node_loot = None, next = None, prev = None):
         self.val = val
         self.event = event
+        self.events = []
         self.event_completed = event_completed
         self.event_looted = event_looted
         self.flee_occur = flee_occur
@@ -180,10 +181,6 @@ class Inventory:
 #         self.weapon_array.add_item("orc_axe_1", "Orc Axe", [4, 1])
 
 class Event:
-    # def __init__(self):
-    #     self.world = Character(None, None, None, 1000, None, None)
-    #     self.loot = Inventory(self.world)
-
     def random_event():
         event_array = [Event.orc_attack, Event.chest_encounter, None]
         return random.choice(event_array)
@@ -204,19 +201,21 @@ class Event:
     def display_node_event(node, game, stdscr):
         events = []
         event_index = 0
-        if node.event == Event.orc_attack and node.event_completed == False:
+        for event in node.events:
             event_index += 1
-            CursesFunctions.curses_center(stdscr, f"{event_index} - Orc Attack", 10 - int(event_index), 0)
-            events.append(Event.orc_attack)
-        elif node.event == Event.loot_event and node.event_looted == False:
-            event_index += 1
-            CursesFunctions.curses_center(stdscr, f"{event_index} - Loot", 10 - int(event_index), 0)
-            events.append(Event.loot_event)
-        elif node.event == Event.chest_encounter and node.event_completed == False:
-            event_index += 1
-            CursesFunctions.curses_center(stdscr, f"{event_index} - Chest", 10 - int(event_index), 0)
-            events.append(Event.chest_encounter)
-        if events:
+            if event == Event.orc_attack and node.event_completed == False:
+                #event_index += 1
+                CursesFunctions.curses_center(stdscr, f"{event_index} - Orc Attack", 10 - int(event_index), 0)
+                #node.events.append(Event.orc_attack)
+            elif event == Event.loot_event and node.event_looted == False:
+                #event_index += 1
+                CursesFunctions.curses_center(stdscr, f"{event_index} - Loot", 10 - int(event_index), 0)
+                #node.events.append(Event.loot_event)
+            elif event == Event.chest_encounter and node.event_completed == False:
+                #event_index += 1
+                CursesFunctions.curses_center(stdscr, f"{event_index} - Chest", 10 - int(event_index), 0)
+                #node.events.append(Event.chest_encounter)
+        if node.events:
             while True:
                 CursesFunctions.curses_center(stdscr, f"Choose Event (1-{event_index}) or Return (r)", 11, 0)
                 y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 9 - int(event_index), 0)
@@ -225,12 +224,12 @@ class Event:
                 event_choice = CursesFunctions.curses_getch_to_str(stdscr, event_input)
                 if event_choice.isdigit():
                     selected_index = int(event_choice) - 1
-                    if 0 <= selected_index < len(events):
-                        if events[selected_index] == Event.chest_encounter:
-                            events[selected_index](node, game.player_inventory, game.player, stdscr)
+                    if 0 <= selected_index < len(node.events):
+                        if node.events[selected_index] == Event.chest_encounter:
+                            node.events[selected_index](node, game.player_inventory, game.player, stdscr)
                             break
                         else:
-                            events[selected_index](node, game, stdscr)
+                            node.events[selected_index](node, game, stdscr)
                             break
                 elif event_choice == 'r' or event_choice == 'R':
                     break
@@ -279,6 +278,8 @@ class Event:
                 Inventory.npc_add_item(orc_weapon_list, "orc_sword_1", "Orc Sword", [2, 3, 3], stdscr)
 
         while node.orc_character_list:
+            if node.event not in node.events:
+                node.events.append(node.event)
             node.event_looted = True
             Game.redraw_event_hud(stdscr)
             Character.display_targets(node.orc_character_list, node.orc_character_list, stdscr)
@@ -308,10 +309,11 @@ class Event:
                 game.player_life_check(stdscr)
                 #node.event_looted = False
                 if not node.orc_character_list:
-
+                    if node.event in node.events:
+                        node.events.remove(Event.orc_attack)
                     node.event_completed = True
+                    node.event_looted = False
                     node.event = Event.loot_event
-
 
             elif event_choice == '2':
                 while True:
@@ -320,7 +322,6 @@ class Event:
                     CursesFunctions.curses_center(stdscr, "Forward/Backward (f/b) Or Return (r)", -1, 0)
                     direction_input = stdscr.getch()
                     direction = CursesFunctions.curses_getch_to_str(stdscr, direction_input)
-
                     if direction == 'f' or direction == 'b' or direction == 'F' or direction == 'B':
                         if not Game.move_validation(game.player_position, direction):
                             CursesFunctions.curses_center(stdscr, "No Space", -2, 0)
@@ -333,6 +334,7 @@ class Event:
                             CursesFunctions.curses_center(stdscr, "Flee Success", 15, 0)
                             node.flee_occur = True
                             node.flee_direction = direction
+                            node.event = Event.orc_attack
                             return
                         else:
                             CursesFunctions.curses_center(stdscr, "Flee Failed", 15, 0)
@@ -342,7 +344,6 @@ class Event:
                     elif direction == 'r' or direction == 'R':
                         Event.orc_attack(node, game, stdscr)
                         break
-
                     else:
                         continue
             else:
@@ -355,10 +356,11 @@ class Event:
             node.node_loot = Inventory(None)
         node.node_loot.npc_add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"], dropped_item["item_statistics"]["max_durability"]], stdscr)
         #node.node_loot = self.loot
-        if node.event != Event.orc_attack:
+        if node.event != Event.orc_attack or node.event != Event.chest_encounter:
             node.event = Event.loot_event
-        node.event_looted = False
-
+        if node.event not in node.events:
+            node.events.append(node.event)
+        
     def loot_event(node, game, stdscr):
         while node.node_loot:
             if not node.node_loot.item_array:
@@ -378,18 +380,7 @@ class Event:
                 game.player_inventory.display_hud_inventory(stdscr)
                 node.node_loot.drop_item(selected_loot)
             else:
-                # Game.redraw_event_hud(stdscr)
-                # CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
-                # stdscr.getch()
                 continue
-                #stdscr.addstr("You Are Over-Encumbered")
-                #game.player_inventory.display_inventory(stdscr)
-                #player_drop_select = CursesFunctions.curses_input(Game, stdscr, 2, 2, "Drop Item (1-) Or Return (r)")
-                #player_drop_select = Game.input_validation(game.player_inventory.item_array, player_drop_select, stdscr)
-                #if player_drop_select == 'r' or player_drop_select == 'R':
-                #    break
-                #player_drop = game.player_inventory.drop_item(int(player_drop_select))
-                #self.loot.add_item(player_drop["item_code"], player_drop["item_name"], [player_drop["item_statistics"]["damage"], player_drop["item_statistics"]["durability"], player_drop["item_statistics"]["max_durability"]])
         else:
             return
 
@@ -417,6 +408,8 @@ ____/______/______/______/______/_____"=.o|o_.--""___/______/______/______/____
 *******************************************************************************
 """
         if node.event_completed == False:
+            if node.event not in node.events:
+                node.events.append(node.event)
             CursesFunctions.curses_clear_to_row(stdscr, 40)
             CursesFunctions.curses_center(stdscr, chest_ascii, 15, 0)
             Game.event_hud(stdscr)
@@ -426,13 +419,12 @@ ____/______/______/______/______/_____"=.o|o_.--""___/______/______/______/____
             chest_choice = CursesFunctions.curses_getch_to_str(stdscr, chest_input)
             if chest_choice == 'y' or chest_choice == 'Y':
                 inventory_capacity = character.inventory_attributes()
-                # if len(inventory_array.item_array) >= inventory_capacity:
-                #     CursesFunctions.curses_center(stdscr, "Unable to add item, You Are Over-Encumbered", 2, 0)
-                #     return node
-                #else:
                 over_encumber = inventory_array.add_item("diamondsword1", "Diamond Sword", [4, 2, 2], stdscr)
                 if over_encumber == False:
                     return node
+                if node.event in node.events:
+                    event_index = node.events.index
+                    node.events.remove(Event.chest_encounter)
                 node.event_completed = True
                 CursesFunctions.curses_center(stdscr, f"You Found {inventory_array}", 2, 0)
             elif chest_choice == 'n' or chest_choice == 'N':
