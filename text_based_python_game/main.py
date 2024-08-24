@@ -96,16 +96,37 @@ class Inventory:
         self.item_array = []
         self.character = character
 
-    def add_item(self, item_code, item_name, item_statistics):
+    def add_item(self, item_code, item_name, item_statistics, stdscr):
         #overencumber
         inventory_capacity = self.character.inventory_attributes()
         if len(self.item_array) >= inventory_capacity:
+            Game.redraw_event_hud(stdscr)
+            CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
+            stdscr.getch()
             return False
         else:
             item = {"item_code": item_code, "item_name": item_name, "item_statistics": {"damage": item_statistics[0], "durability": item_statistics[1], "max_durability": item_statistics[2]}}
             self.item_array.append(item)
             return True
+        
+    def npc_add_item(self, item_code, item_name, item_statistics, stdscr):
+        item = {"item_code": item_code, "item_name": item_name, "item_statistics": {"damage": item_statistics[0], "durability": item_statistics[1], "max_durability": item_statistics[2]}}
+        self.item_array.append(item)
+        return True
     
+    def add_item(self, item_code, item_name, item_statistics, stdscr):
+        #overencumber
+        inventory_capacity = self.character.inventory_attributes()
+        if len(self.item_array) >= inventory_capacity:
+            Game.redraw_event_hud(stdscr)
+            CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
+            stdscr.getch()
+            return False
+        else:
+            item = {"item_code": item_code, "item_name": item_name, "item_statistics": {"damage": item_statistics[0], "durability": item_statistics[1], "max_durability": item_statistics[2]}}
+            self.item_array.append(item)
+            return True
+
     def drop_item(self, index):
         if 0 <= index < len(self.item_array):
             return self.item_array.pop(index)
@@ -158,7 +179,11 @@ class Inventory:
 #         self.weapon_array.add_item("orc_sword_1", "Orc Sword", [2, 3])
 #         self.weapon_array.add_item("orc_axe_1", "Orc Axe", [4, 1])
 
-class Event:   
+class Event:
+    # def __init__(self):
+    #     self.world = Character(None, None, None, 1000, None, None)
+    #     self.loot = Inventory(self.world)
+
     def random_event():
         event_array = [Event.orc_attack, Event.chest_encounter, None]
         return random.choice(event_array)
@@ -171,7 +196,9 @@ class Event:
             if node.event:
                 if node.event == Event.chest_encounter:
                     node.event(node, game.player_inventory, game.player, stdscr)
-                else:
+                elif node.event == Event.orc_attack:
+                    node.event(node, game, stdscr)
+                elif node.event == Event.loot_event:
                     node.event(node, game, stdscr)
 
     def display_node_event(node, game, stdscr):
@@ -181,10 +208,10 @@ class Event:
             event_index += 1
             CursesFunctions.curses_center(stdscr, f"{event_index} - Orc Attack", 10 - int(event_index), 0)
             events.append(Event.orc_attack)
-        elif node.event == Event.orc_attack and node.event_looted== False:
+        elif node.event == Event.loot_event and node.event_looted == False:
             event_index += 1
             CursesFunctions.curses_center(stdscr, f"{event_index} - Loot", 10 - int(event_index), 0)
-            events.append(Event.orc_attack)
+            events.append(Event.loot_event)
         elif node.event == Event.chest_encounter and node.event_completed == False:
             event_index += 1
             CursesFunctions.curses_center(stdscr, f"{event_index} - Chest", 10 - int(event_index), 0)
@@ -239,8 +266,6 @@ class Event:
             return selected_item
 
     def orc_attack(node, game, stdscr):
-        world = Character(None, None, None, 1000, None, None)
-        loot = Inventory(world)
         node.flee_occur = False
         if not hasattr(node, 'orc_character_list'):
             node.orc_character_list = []
@@ -251,7 +276,7 @@ class Event:
                 node.orc_character_list.append(orc)
                 orc_weapon_list = Inventory(orc)
                 node.orc_inventory_list.append(orc_weapon_list)
-                Inventory.add_item(orc_weapon_list, "orc_sword_1", "Orc Sword", [2, 3, 3])
+                Inventory.npc_add_item(orc_weapon_list, "orc_sword_1", "Orc Sword", [2, 3, 3], stdscr)
 
         while node.orc_character_list:
             node.event_looted = True
@@ -276,14 +301,17 @@ class Event:
                         orc_inventory = node.orc_inventory_list[selected_target]
                         while orc_inventory.item_array:
                             dropped_item = orc_inventory.drop_item(0)
-                            loot.add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"], dropped_item["item_statistics"]["max_durability"]])
+                            Event.add_to_loot_event(dropped_item, node, stdscr)
                         node.orc_character_list.pop(selected_target)
                         node.orc_inventory_list.pop(selected_target)
-                        stdscr.addstr("\n")
-                        node.node_loot = loot
+                        #node.node_loot = self.loot
                 game.player_life_check(stdscr)
-                node.event_looted = False
-                node.event_completed = True
+                #node.event_looted = False
+                if not node.orc_character_list:
+
+                    node.event_completed = True
+                    node.event = Event.loot_event
+
 
             elif event_choice == '2':
                 while True:
@@ -319,7 +347,19 @@ class Event:
                         continue
             else:
                 Event.orc_attack(node, game, stdscr)
-                
+        if not node.orc_character_list:
+            Event.loot_event(node, game, stdscr)
+
+    def add_to_loot_event(dropped_item, node, stdscr):
+        if not hasattr(node, 'node_loot') or node.node_loot is None:
+            node.node_loot = Inventory(None)
+        node.node_loot.npc_add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"], dropped_item["item_statistics"]["max_durability"]], stdscr)
+        #node.node_loot = self.loot
+        if node.event != Event.orc_attack:
+            node.event = Event.loot_event
+        node.event_looted = False
+
+    def loot_event(node, game, stdscr):
         while node.node_loot:
             if not node.node_loot.item_array:
                 node.event_looted = True
@@ -334,28 +374,24 @@ class Event:
             if selected_loot == 'r' or selected_loot == 'R':
                 return node
             retrieved_loot = node.node_loot.item_retrieve(selected_loot)
-            if game.player_inventory.add_item(retrieved_loot["item_code"], retrieved_loot["item_name"], [retrieved_loot["item_statistics"]["damage"], retrieved_loot["item_statistics"]["durability"], retrieved_loot["item_statistics"]["max_durability"]]) == True:
+            if game.player_inventory.add_item(retrieved_loot["item_code"], retrieved_loot["item_name"], [retrieved_loot["item_statistics"]["damage"], retrieved_loot["item_statistics"]["durability"], retrieved_loot["item_statistics"]["max_durability"]], stdscr) == True:
                 game.player_inventory.display_hud_inventory(stdscr)
                 node.node_loot.drop_item(selected_loot)
             else:
-                stdscr.addstr("You Are Over-Encumbered")
-                game.player_inventory.display_inventory(stdscr)
-                player_drop_select = CursesFunctions.curses_input(Game, stdscr, 2, 2, "Drop Item (1-) Or Return (r)")
-                player_drop_select = Game.input_validation(game.player_inventory.item_array, player_drop_select, stdscr)
-                if player_drop_select == 'r' or player_drop_select == 'R':
-                    break
-                player_drop = game.player_inventory.drop_item(int(player_drop_select))
-                loot.add_item(player_drop["item_code"], player_drop["item_name"], [player_drop["item_statistics"]["damage"], player_drop["item_statistics"]["durability"], player_drop["item_statistics"]["max_durability"]])
+                # Game.redraw_event_hud(stdscr)
+                # CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
+                # stdscr.getch()
+                continue
+                #stdscr.addstr("You Are Over-Encumbered")
+                #game.player_inventory.display_inventory(stdscr)
+                #player_drop_select = CursesFunctions.curses_input(Game, stdscr, 2, 2, "Drop Item (1-) Or Return (r)")
+                #player_drop_select = Game.input_validation(game.player_inventory.item_array, player_drop_select, stdscr)
+                #if player_drop_select == 'r' or player_drop_select == 'R':
+                #    break
+                #player_drop = game.player_inventory.drop_item(int(player_drop_select))
+                #self.loot.add_item(player_drop["item_code"], player_drop["item_name"], [player_drop["item_statistics"]["damage"], player_drop["item_statistics"]["durability"], player_drop["item_statistics"]["max_durability"]])
         else:
             return
-
-    def node_loot_event(node, game, stdscr):
-        if node.game.loot:
-            loot_event = True
-        else:
-            loot_event = False
-        if loot_event:
-            node.game.loot.display_inventory(stdscr)
 
     def chest_encounter(node, inventory_array, character, stdscr):
         chest_ascii = r"""
@@ -390,13 +426,15 @@ ____/______/______/______/______/_____"=.o|o_.--""___/______/______/______/____
             chest_choice = CursesFunctions.curses_getch_to_str(stdscr, chest_input)
             if chest_choice == 'y' or chest_choice == 'Y':
                 inventory_capacity = character.inventory_attributes()
-                if len(inventory_array.item_array) >= inventory_capacity:
-                    CursesFunctions.curses_center(stdscr, "Unable to add item, You Are Over-Encumbered", 2, 0)
+                # if len(inventory_array.item_array) >= inventory_capacity:
+                #     CursesFunctions.curses_center(stdscr, "Unable to add item, You Are Over-Encumbered", 2, 0)
+                #     return node
+                #else:
+                over_encumber = inventory_array.add_item("diamondsword1", "Diamond Sword", [4, 2, 2], stdscr)
+                if over_encumber == False:
                     return node
-                else:
-                    inventory_array.add_item("diamondsword1", "Diamond Sword", [4, 2, 2])
-                    node.event_completed = True
-                    CursesFunctions.curses_center(stdscr, f"You Found {inventory_array}", 2, 0)
+                node.event_completed = True
+                CursesFunctions.curses_center(stdscr, f"You Found {inventory_array}", 2, 0)
             elif chest_choice == 'n' or chest_choice == 'N':
                 #CursesFunctions.curses_center(stdscr, "You Did Not Open The Chest", 4, 0)
                 return
@@ -406,8 +444,6 @@ ____/______/______/______/______/_____"=.o|o_.--""___/______/______/______/____
         else:
             return
         
-
-
 class Game:
     def __init__(self):
         self.head, self.tail = self.generate_world()
@@ -419,7 +455,6 @@ class Game:
         self.max_mana = 50
         self.player = Character(self.max_health, self.max_stamina, self.max_mana, 1110, 10, 3)
         self.player_inventory = Inventory(self.player)
-        self.player_inventory.add_item("unarmed", "Unarmed", [0, float('inf'), float('inf')])
         self.menu_choice = ''
         self.player_name = ''
 
@@ -474,6 +509,7 @@ ____________  __    __  _____
                 continue
             else:
                 break
+        self.player_inventory.add_item("unarmed", "Unarmed", [0, float('inf'), float('inf')], stdscr)
         stdscr.clear()
 
         # trigger event in first node
@@ -604,9 +640,12 @@ ____________  __    __  _____
             if drop_select == 'r' or drop_select == 'R':
                 return
             dropped_item = self.player_inventory.drop_item(int(drop_select))
+            Event.add_to_loot_event(dropped_item, node, stdscr)
+            Game.redraw_event_hud(stdscr)
+
             # if node.node_loot is None:
             #     node.node_loot = Inventory(self.world)
-            self.loot.add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"], dropped_item["item_statistics"]["max_durability"]])
+            #self.loot.add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"], dropped_item["item_statistics"]["max_durability"]], stdscr)
             #self.loot.display_inventory(stdscr)
             #stdscr.getch()
         else:
