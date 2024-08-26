@@ -84,6 +84,7 @@ class Character:
             inventory.durability(selected_item, stdscr)
             game.player_inventory.display_hud_inventory(stdscr)
             Game.redraw_event_hud(stdscr)
+            Game.redraw_ui(game, stdscr)
         return target.health
 
     def display_targets(self, target_list, stdscr):
@@ -97,11 +98,12 @@ class Inventory:
         self.item_array = []
         self.character = character
 
-    def add_item(self, item_code, item_name, item_statistics, stdscr):
+    def add_item(self, item_code, item_name, item_statistics, stdscr, game):
         #overencumber
         inventory_capacity = self.character.inventory_attributes()
         if len(self.item_array) >= inventory_capacity:
             Game.redraw_event_hud(stdscr)
+            Game.redraw_ui(game, stdscr)
             CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
             stdscr.getch()
             return False
@@ -110,23 +112,23 @@ class Inventory:
             self.item_array.append(item)
             return True
         
-    def npc_add_item(self, item_code, item_name, item_statistics, stdscr):
+    def npc_add_item(self, item_code, item_name, item_statistics):
         item = {"item_code": item_code, "item_name": item_name, "item_statistics": {"damage": item_statistics[0], "durability": item_statistics[1], "max_durability": item_statistics[2]}}
         self.item_array.append(item)
         return True
     
-    def add_item(self, item_code, item_name, item_statistics, stdscr):
-        #overencumber
-        inventory_capacity = self.character.inventory_attributes()
-        if len(self.item_array) >= inventory_capacity:
-            Game.redraw_event_hud(stdscr)
-            CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
-            stdscr.getch()
-            return False
-        else:
-            item = {"item_code": item_code, "item_name": item_name, "item_statistics": {"damage": item_statistics[0], "durability": item_statistics[1], "max_durability": item_statistics[2]}}
-            self.item_array.append(item)
-            return True
+    # def add_item(self, item_code, item_name, item_statistics, stdscr):
+    #     #overencumber
+    #     inventory_capacity = self.character.inventory_attributes()
+    #     if len(self.item_array) >= inventory_capacity:
+    #         Game.redraw_event_hud(stdscr)
+    #         CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
+    #         stdscr.getch()
+    #         return False
+    #     else:
+    #         item = {"item_code": item_code, "item_name": item_name, "item_statistics": {"damage": item_statistics[0], "durability": item_statistics[1], "max_durability": item_statistics[2]}}
+    #         self.item_array.append(item)
+    #         return True
 
     def drop_item(self, index):
         if 0 <= index < len(self.item_array):
@@ -187,35 +189,39 @@ class Event:
     
     def trigger_event(node, game, stdscr):
         Game.redraw_event_hud(stdscr)
+        Game.redraw_ui(game, stdscr)
         if node == None:
             return
         else:
             if node.event:
                 if node.event == Event.chest_encounter:
-                    node.event(node, game.player_inventory, game.player, stdscr)
+                    node.event(node, game.player_inventory, game.player, stdscr, game)
                 elif node.event == Event.orc_attack:
                     node.event(node, game, stdscr)
                 elif node.event == Event.loot_event:
                     node.event(node, game, stdscr)
 
     def display_node_event(node, game, stdscr):
-        events = []
+        #events = []
         event_index = 0
         for event in node.events:
-            event_index += 1
+            
+            #CursesFunctions.curses_center(stdscr, f"{event_index} - {event} - {node.event_looted}", 10 - int(event_index), 0)
+
             if event == Event.orc_attack and node.event_completed == False:
-                #event_index += 1
+                event_index += 1
                 CursesFunctions.curses_center(stdscr, f"{event_index} - Orc Attack", 10 - int(event_index), 0)
                 #node.events.append(Event.orc_attack)
             elif event == Event.loot_event and node.event_looted == False:
-                #event_index += 1
+                event_index += 1
                 CursesFunctions.curses_center(stdscr, f"{event_index} - Loot", 10 - int(event_index), 0)
                 #node.events.append(Event.loot_event)
             elif event == Event.chest_encounter and node.event_completed == False:
-                #event_index += 1
+                event_index += 1
                 CursesFunctions.curses_center(stdscr, f"{event_index} - Chest", 10 - int(event_index), 0)
                 #node.events.append(Event.chest_encounter)
-        if node.events:
+                
+        if event_index > 0:
             while True:
                 CursesFunctions.curses_center(stdscr, f"Choose Event (1-{event_index}) or Return (r)", 11, 0)
                 y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 9 - int(event_index), 0)
@@ -226,7 +232,7 @@ class Event:
                     selected_index = int(event_choice) - 1
                     if 0 <= selected_index < len(node.events):
                         if node.events[selected_index] == Event.chest_encounter:
-                            node.events[selected_index](node, game.player_inventory, game.player, stdscr)
+                            node.events[selected_index](node, game.player_inventory, game.player, stdscr, game)
                             break
                         else:
                             node.events[selected_index](node, game, stdscr)
@@ -241,7 +247,35 @@ class Event:
             stdscr.getch()
 
     def select_target(node, game, max_target, stdscr):
-        Game.redraw_event_hud(stdscr)
+        orc_ascii = r"""
+            (    )
+            ((((()))
+            |O\ /O)|
+            ( (  _')
+            (._.  /\__
+            ,\___,/ '  ')
+'.,_,,       (  .- .   .    )
+\   \\     ( '        )(    )
+\   \\    \.  _.__ ____( .  |
+\  /\\   .(   .'  /\  '.  )
+    \(  \\.-' ( /    \/    \)
+    '  ()) _'.-|/\/\/\/\/\|
+        '\\ .( |\/\/\/\/\/|
+        '((  \    /\    /
+        ((((  '.__\/__.')
+            ((,) /   ((()   )
+            "..-,  (()("   /
+            _//.   ((() ."
+    _____ //,/" ___ ((( ', ___
+                    ((  )
+                        / /
+                    _/,/'
+                    /,/,"
+"""
+        #Game.orc_event_hud(stdscr)
+        Game.redraw_orc_ui(game, stdscr)
+        #Game.redraw_ui(game, stdscr)
+        CursesFunctions.curses_center(stdscr, orc_ascii, 22, 0)
         Character.display_targets(node.orc_character_list, node.orc_character_list, stdscr)
         CursesFunctions.curses_center(stdscr, f"Select Target (1-{max_target}) Or Return (r)", -1, 0)
         selected_target_input = stdscr.getch()
@@ -253,7 +287,35 @@ class Event:
             return selected_target
         
     def select_item(node, game, max_item, stdscr):
-        Game.redraw_event_hud(stdscr)
+        orc_ascii = r"""
+            (    )
+            ((((()))
+            |O\ /O)|
+            ( (  _')
+            (._.  /\__
+            ,\___,/ '  ')
+'.,_,,       (  .- .   .    )
+\   \\     ( '        )(    )
+\   \\    \.  _.__ ____( .  |
+\  /\\   .(   .'  /\  '.  )
+    \(  \\.-' ( /    \/    \)
+    '  ()) _'.-|/\/\/\/\/\|
+        '\\ .( |\/\/\/\/\/|
+        '((  \    /\    /
+        ((((  '.__\/__.')
+            ((,) /   ((()   )
+            "..-,  (()("   /
+            _//.   ((() ."
+    _____ //,/" ___ ((( ', ___
+                    ((  )
+                        / /
+                    _/,/'
+                    /,/,"
+"""
+        #Game.orc_event_hud(stdscr)
+        Game.redraw_orc_ui(game, stdscr)
+        #Game.redraw_ui(game, stdscr)
+        CursesFunctions.curses_center(stdscr, orc_ascii, 22, 0)
         Character.display_targets(node.orc_character_list, node.orc_character_list, stdscr)
         CursesFunctions.curses_center(stdscr, f"Select Item (1-{max_item}) Or Return (r)", -1, 15)
         selected_item_input = stdscr.getch()
@@ -265,6 +327,41 @@ class Event:
             return selected_item
 
     def orc_attack(node, game, stdscr):
+        """
+        \n@purpose\n
+        
+        \n@param\n
+        you dtry speaking with the orc but they are unresponsive
+        \n@return\n
+
+        \n@notes\n
+        orc_ascii - Kaslanba via GitHub
+        """
+        orc_ascii = r"""
+            (    )
+            ((((()))
+            |O\ /O)|
+            ( (  _')
+            (._.  /\__
+            ,\___,/ '  ')
+'.,_,,       (  .- .   .    )
+\   \\     ( '        )(    )
+\   \\    \.  _.__ ____( .  |
+\  /\\   .(   .'  /\  '.  )
+    \(  \\.-' ( /    \/    \)
+    '  ()) _'.-|/\/\/\/\/\|
+        '\\ .( |\/\/\/\/\/|
+        '((  \    /\    /
+        ((((  '.__\/__.')
+            ((,) /   ((()   )
+            "..-,  (()("   /
+            _//.   ((() ."
+    _____ //,/" ___ ((( ', ___
+                    ((  )
+                        / /
+                    _/,/'
+                    /,/,"
+"""
         node.flee_occur = False
         if not hasattr(node, 'orc_character_list'):
             node.orc_character_list = []
@@ -275,19 +372,27 @@ class Event:
                 node.orc_character_list.append(orc)
                 orc_weapon_list = Inventory(orc)
                 node.orc_inventory_list.append(orc_weapon_list)
-                Inventory.npc_add_item(orc_weapon_list, "orc_sword_1", "Orc Sword", [2, 3, 3], stdscr)
+                Inventory.npc_add_item(orc_weapon_list, "orc_sword_1", "Orc Sword", [2, 3, 3])
 
         while node.orc_character_list:
             if node.event not in node.events:
                 node.events.append(node.event)
             node.event_looted = True
-            Game.redraw_event_hud(stdscr)
+            
+            #Game.orc_event_hud(stdscr)
+            Game.redraw_orc_ui(game, stdscr)
+            #Game.redraw_ui(game, stdscr)
+            CursesFunctions.curses_center(stdscr, orc_ascii, 22, 0)
             Character.display_targets(node.orc_character_list, node.orc_character_list, stdscr)
             CursesFunctions.curses_center(stdscr, "1 - Attack\n2 - Flee", -1, 0)
             event_input = stdscr.getch()
             event_choice = CursesFunctions.curses_getch_to_str(stdscr, event_input)
             if event_choice == '1':
                 while node.orc_character_list:
+                    #Game.orc_event_hud(stdscr)
+                    Game.redraw_orc_ui(game, stdscr)
+                    CursesFunctions.curses_center(stdscr, orc_ascii, 22, 0)
+                    #Game.redraw_ui(game, stdscr)
                     orc_amount = len(node.orc_character_list)
                     item_amount = len(game.player_inventory.item_array)
                     selected_target = Event.select_target(node, game, orc_amount, stdscr)
@@ -296,13 +401,16 @@ class Event:
                     selected_item = Event.select_item(node, game, item_amount, stdscr)
                     if selected_item == None:
                         continue
-                    Game.redraw_event_hud(stdscr)
+                    #Game.orc_event_hud(stdscr)
+                    Game.redraw_orc_ui(game, stdscr)
+                    CursesFunctions.curses_center(stdscr, orc_ascii, 22, 0)
+                    #Game.redraw_ui(game, stdscr)
                     game.player.attack(node.orc_character_list[selected_target], selected_item, game.player_inventory, game, stdscr)
                     if node.orc_character_list[selected_target].health <= 0:
                         orc_inventory = node.orc_inventory_list[selected_target]
                         while orc_inventory.item_array:
                             dropped_item = orc_inventory.drop_item(0)
-                            Event.add_to_loot_event(dropped_item, node, stdscr)
+                            Event.add_to_loot_event(dropped_item, node, stdscr, game)
                         node.orc_character_list.pop(selected_target)
                         node.orc_inventory_list.pop(selected_target)
                         #node.node_loot = self.loot
@@ -312,12 +420,15 @@ class Event:
                     if node.event in node.events:
                         node.events.remove(Event.orc_attack)
                     node.event_completed = True
+                    #node.events.append(Event.loot_event)
+
                     node.event_looted = False
                     node.event = Event.loot_event
 
             elif event_choice == '2':
                 while True:
                     Game.redraw_event_hud(stdscr)
+                    Game.redraw_ui(game, stdscr)
                     Character.display_targets(node.orc_character_list, node.orc_character_list, stdscr)
                     CursesFunctions.curses_center(stdscr, "Forward/Backward (f/b) Or Return (r)", -1, 0)
                     direction_input = stdscr.getch()
@@ -327,6 +438,7 @@ class Event:
                             CursesFunctions.curses_center(stdscr, "No Space", -2, 0)
                             stdscr.getch()
                             Game.redraw_event_hud(stdscr)
+                            Game.redraw_ui(game, stdscr)
                             continue 
                         flee_chance = 1 + game.player.agility
                         flee_success = random.randint(1,10)
@@ -338,9 +450,13 @@ class Event:
                             return
                         else:
                             CursesFunctions.curses_center(stdscr, "Flee Failed", 15, 0)
+                            stdscr.getch()
                             game.player.health -= 10
                             game.player.stamina -= 10
-                            Event.orc_attack(node, game, stdscr)
+                            Game.stat_hud(game, stdscr)
+                            #stdscr.refresh()
+                            continue
+                            #Event.orc_attack(node, game, stdscr)
                     elif direction == 'r' or direction == 'R':
                         Event.orc_attack(node, game, stdscr)
                         break
@@ -351,15 +467,17 @@ class Event:
         if not node.orc_character_list:
             Event.loot_event(node, game, stdscr)
 
-    def add_to_loot_event(dropped_item, node, stdscr):
+    def add_to_loot_event(dropped_item, node, stdscr, game):
         if not hasattr(node, 'node_loot') or node.node_loot is None:
             node.node_loot = Inventory(None)
-        node.node_loot.npc_add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"], dropped_item["item_statistics"]["max_durability"]], stdscr)
+        node.node_loot.npc_add_item(dropped_item["item_code"], dropped_item["item_name"], [dropped_item["item_statistics"]["damage"], dropped_item["item_statistics"]["durability"], dropped_item["item_statistics"]["max_durability"]])
         #node.node_loot = self.loot
+        node.event_looted = False
         if node.event != Event.orc_attack or node.event != Event.chest_encounter:
             node.event = Event.loot_event
         if node.event not in node.events:
             node.events.append(node.event)
+        
         
     def loot_event(node, game, stdscr):
         while node.node_loot:
@@ -367,6 +485,7 @@ class Event:
                 node.event_looted = True
                 return
             Game.redraw_event_hud(stdscr)
+            Game.redraw_ui(game, stdscr)
             node.node_loot.display_inventory(stdscr)
             max_loot = len(node.node_loot.item_array)
             CursesFunctions.curses_center(stdscr, f"Select Loot To Take (1-{max_loot}) Or Return (r)", 10, 0)
@@ -376,7 +495,7 @@ class Event:
             if selected_loot == 'r' or selected_loot == 'R':
                 return node
             retrieved_loot = node.node_loot.item_retrieve(selected_loot)
-            if game.player_inventory.add_item(retrieved_loot["item_code"], retrieved_loot["item_name"], [retrieved_loot["item_statistics"]["damage"], retrieved_loot["item_statistics"]["durability"], retrieved_loot["item_statistics"]["max_durability"]], stdscr) == True:
+            if game.player_inventory.add_item(retrieved_loot["item_code"], retrieved_loot["item_name"], [retrieved_loot["item_statistics"]["damage"], retrieved_loot["item_statistics"]["durability"], retrieved_loot["item_statistics"]["max_durability"]], stdscr, game) == True:
                 game.player_inventory.display_hud_inventory(stdscr)
                 node.node_loot.drop_item(selected_loot)
             else:
@@ -384,7 +503,7 @@ class Event:
         else:
             return
 
-    def chest_encounter(node, inventory_array, character, stdscr):
+    def chest_encounter(node, inventory_array, character, stdscr, game):
         chest_ascii = r"""
 *******************************************************************************
           |                   |                  |                     |
@@ -412,14 +531,14 @@ ____/______/______/______/______/_____"=.o|o_.--""___/______/______/______/____
                 node.events.append(node.event)
             CursesFunctions.curses_clear_to_row(stdscr, 40)
             CursesFunctions.curses_center(stdscr, chest_ascii, 15, 0)
-            Game.event_hud(stdscr)
+            Game.redraw_ui(game, stdscr)
             curses.echo(0)
             CursesFunctions.curses_center(stdscr, "You Discover A Chest\nOpen Chest (y/n)", 3, 0)
             chest_input = stdscr.getch()
             chest_choice = CursesFunctions.curses_getch_to_str(stdscr, chest_input)
             if chest_choice == 'y' or chest_choice == 'Y':
                 inventory_capacity = character.inventory_attributes()
-                over_encumber = inventory_array.add_item("diamondsword1", "Diamond Sword", [4, 2, 2], stdscr)
+                over_encumber = inventory_array.add_item("diamondsword1", "Diamond Sword", [4, 2, 2], stdscr, game)
                 if over_encumber == False:
                     return node
                 if node.event in node.events:
@@ -432,7 +551,7 @@ ____/______/______/______/______/_____"=.o|o_.--""___/______/______/______/____
                 return
             else:
                 CursesFunctions.curses_center(stdscr, "Invalid Input", 2, 0)
-                Event.chest_encounter(node, inventory_array, character, stdscr)
+                Event.chest_encounter(node, inventory_array, character, stdscr, game)
         else:
             return
         
@@ -445,7 +564,7 @@ class Game:
         self.max_health = 100
         self.max_stamina = 75
         self.max_mana = 50
-        self.player = Character(self.max_health, self.max_stamina, self.max_mana, 1110, 10, 3)
+        self.player = Character(self.max_health, self.max_stamina, self.max_mana, 1, 1, 3)
         self.player_inventory = Inventory(self.player)
         self.menu_choice = ''
         self.player_name = ''
@@ -458,7 +577,7 @@ class Game:
 
     def start_game(self, stdscr):
         stdscr.clear()
-        curses.start_color()
+        #curses.start_color()
         curses.init_color(1, 500, 500, 500) # grey color
         curses.init_pair(2, 1, curses.COLOR_BLACK)
         title_string = r"""
@@ -501,7 +620,7 @@ ____________  __    __  _____
                 continue
             else:
                 break
-        self.player_inventory.add_item("unarmed", "Unarmed", [0, float('inf'), float('inf')], stdscr)
+        self.player_inventory.add_item("unarmed", "Unarmed", [0, float('inf'), float('inf')], stdscr, self)
         stdscr.clear()
 
         # trigger event in first node
@@ -509,14 +628,19 @@ ____________  __    __  _____
         # if self.player_position.flee_occur:
         #     self.player_position = Game.move(self.player_position, self.player_position.flee_direction, stdscr)
 
+
+
+
+
     def menu(self, stdscr):
         curses.curs_set(0)
         curses.echo(0)
-        menu_string = "1 - Area\n2 - Move\n3 - Rest\n4 - Gear\n5 - Exit"
-        hud_height = -8
+        # menu_string = "1 - Area\n2 - Move\n3 - Rest\n4 - Gear\n5 - Exit"
+        # hud_height = -8
         stdscr.clear()
-        CursesFunctions.curses_center(stdscr, menu_string, hud_height, 0)
-        CursesFunctions.curses_box(stdscr, 8, 21, hud_height, 0)
+        # CursesFunctions.curses_center(stdscr, menu_string, hud_height, 0)
+        # CursesFunctions.curses_box(stdscr, 8, 21, hud_height, 0)
+        Game.menu_hud(stdscr)
         self.stat_hud(stdscr)
         self.inventory_hud(stdscr)
         Game.event_hud(stdscr)
@@ -540,6 +664,7 @@ ____________  __    __  _____
                 if direction_choice not in ['f', 'b', 'r', 'F', 'B', 'R']:
                     continue
                 Game.redraw_event_hud(stdscr)
+                Game.redraw_ui(self, stdscr)
                 self.player_position = Game.move(self.player_position, direction_choice, stdscr)
                 if direction_choice not in ['r', 'R']:
                     Event.trigger_event(self.player_position, self, stdscr)
@@ -572,10 +697,17 @@ ____________  __    __  _____
                     break
                 else:
                     Game.redraw_event_hud(stdscr)
+                    Game.redraw_ui(self, stdscr)
                     CursesFunctions.curses_center(stdscr, "Invalid Input", 8, 0)
                     continue
         else:
             self.menu(stdscr)
+
+    def menu_hud(stdscr):
+        menu_string = "1 - Area\n2 - Move\n3 - Rest\n4 - Gear\n5 - Exit"
+        hud_height = -8
+        CursesFunctions.curses_center(stdscr, menu_string, hud_height, 0)
+        CursesFunctions.curses_box(stdscr, 8, 21, hud_height, 0)
 
     def stat_hud(self, stdscr):
         character_ascii = r"""
@@ -619,9 +751,12 @@ ____________  __    __  _____
         CursesFunctions.curses_box(stdscr, 22, 35, -15, 30)
 
     def redraw_inventory_hud(stdscr):
-        stdscr.move(-15, 10)
-        stdscr.clrtoeol()
-        CursesFunctions.curses_box(stdscr, 22, 35, -15, 30)
+        try:
+            stdscr.move(-15, 10)
+            stdscr.clrtoeol()
+            CursesFunctions.curses_box(stdscr, 22, 35, -15, 30)
+        except curses.error:
+            pass
 
     def inventory_interact(self, node, stdscr):
         if len(self.player_inventory.item_array) != 0:
@@ -632,7 +767,7 @@ ____________  __    __  _____
             if drop_select == 'r' or drop_select == 'R':
                 return
             dropped_item = self.player_inventory.drop_item(int(drop_select))
-            Event.add_to_loot_event(dropped_item, node, stdscr)
+            Event.add_to_loot_event(dropped_item, node, stdscr, self)
             Game.redraw_event_hud(stdscr)
 
             # if node.node_loot is None:
@@ -652,6 +787,19 @@ ____________  __    __  _____
         Game.event_hud(stdscr)
         #stdscr.refresh()
 
+    def redraw_orc_ui(self, stdscr):
+        CursesFunctions.curses_clear_to_row(stdscr, 60) # clears screen until top of hud
+        CursesFunctions.curses_box(stdscr, 38, 100, 16, 0) #name box
+        Game.inventory_hud(self, stdscr)
+        Game.menu_hud(stdscr)
+        Game.stat_hud(self, stdscr)
+
+    def redraw_ui(self, stdscr):
+        Game.inventory_hud(self, stdscr)
+        Game.menu_hud(stdscr)
+        Game.stat_hud(self, stdscr)
+        Game.event_hud(stdscr)
+        
     def move(player_node, direction, stdscr):
         while True:
             if direction == 'f' or direction == 'F':
