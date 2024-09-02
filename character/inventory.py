@@ -70,7 +70,7 @@ class Inventory:
             y_offset -= 1
 
     def display_hud_inventory(self, stdscr):
-        y_offset = -7
+        y_offset = -8
         for i, item in enumerate(self.item_array):
             CursesFunctions.curses_center(stdscr, f"{i+1} - {item["item_name"]} - {item["item_statistics"]["damage"]} - {item["item_statistics"]["durability"]}/{item["item_statistics"]["max_durability"]}", y_offset, 15)
             y_offset -= 1

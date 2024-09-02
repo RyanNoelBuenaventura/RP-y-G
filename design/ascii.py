@@ -8,6 +8,10 @@ ____________  __    __  _____
              \_\__/ /_/       
                |___/          
 """
+"""
+\n@notes\n
+https://patorjk.com/software/taag/#p=display&f=Doom&t=RP(y)G
+"""
 
 character_ascii = r"""
       _,.
@@ -30,6 +34,24 @@ character_ascii = r"""
    `Y-.____(__}
     |     {__)
           ()
+"""
+"""
+\n@notes\n
+https://www.asciiart.eu/people/occupations/knights
+"""
+
+fight_ascii = r"""          
+     /
+     \C        \
+   _ /`--|)---- \_ O__/
+   \`\          `\/_\
+  `` /_            \\
+                   ` \
+                     -'
+"""
+"""
+\n@notes\n
+https://ascii.co.uk/art/fight
 """
 
 orc_ascii = r"""
@@ -57,6 +79,11 @@ orc_ascii = r"""
                     _/,/'
                     /,/,"
 """
+"""
+\n@notes\n
+https://github.com/Kaslanba/ASCII-Game-with-Python/blob/main/orc.py
+Kaslanba via GitHub
+"""
 
 chest_ascii = r"""
 *******************************************************************************
@@ -79,4 +106,8 @@ ____/______/______/______/__"=._o--._   ;o|o;     _._;o;____/______/______/____
 ____/______/______/______/______/_____"=.o|o_.--""___/______/______/______/____
 /______/______/______/______/______/______/______/______/______/______/______/_
 *******************************************************************************
+"""
+"""
+\n@notes\n
+https://ascii.co.uk/art/treasure
 """

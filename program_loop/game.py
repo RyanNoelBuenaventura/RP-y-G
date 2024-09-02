@@ -1,3 +1,5 @@
+import random
+
 from main import *
 from character import *
 from program_loop import *
@@ -6,15 +8,26 @@ class Game:
     def __init__(self):
         self.head, self.tail = self.generate_world()
         self.player_position = self.head
-        self.world = Character(None, None, None, 1000, None, None)
+        self.world = Character(None, None, None, None, None, None, None, None, None, 1000, None, None, None)
         self.loot = Inventory(self.world)
-        self.max_health = 100
-        self.max_stamina = 75
-        self.max_mana = 50
-        self.player = Character(self.max_health, self.max_stamina, self.max_mana, 1, 1, 3)
+        self.base_health = 100
+        self.base_stamina = 75
+        self.base_mana = 50
+        self.max_health = 0
+        self.max_stamina = 0
+        self.max_mana = 0
+        self.health = 0
+        self.stamina = 0
+        self.mana = 0
+        self.player_level = 1
+        self.player_level_progress = 0
+        self.player = Character(self.health, self.stamina, self.mana, self.max_health, self.max_stamina, self.max_mana, self.base_health, self.base_stamina, self.base_mana, 2, 2, 2, self.player_level)
         self.player_inventory = Inventory(self.player)
-        self.menu_choice = ''
+        self.player_race = ''
+        self.player_background = ''
         self.player_name = ''
+        self.menu_choice = ''
+        self.player_gold = 0
 
     def generate_world(self):
         self.head = self.tail = program_loop.MapDoublyNode(1, program_loop.Event.random_event())
@@ -43,6 +56,11 @@ class Game:
             else:
                 break
         stdscr.clear()
+
+
+        
+        self.character_creation(stdscr)
+
         curses.curs_set(1)
         while True:
             y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, -3, -9)
@@ -57,18 +75,160 @@ class Game:
                 continue
             else:
                 break
-        self.player_inventory.add_item("unarmed", "Unarmed", [0, float('inf'), float('inf')], stdscr, self)
-        stdscr.clear()
 
+
+        
+        self.player_inventory.add_item("unarmed", "Unarmed", [0, float('inf'), float('inf')], stdscr, self)
         # trigger event in first node
         # Event.trigger_event(self.player_position, self, stdscr)
         # if self.player_position.flee_occur:
         #     self.player_position = Game.move(self.player_position, self.player_position.flee_direction, stdscr)
 
+    def character_creation(self, stdscr):
+        while True:
+            curses.curs_set(0)
+            curses.echo(0)
+            stdscr.clear()
+            CursesFunctions.curses_center(stdscr, "Select Race (1-3)", 0, 0)
+            CursesFunctions.curses_center(stdscr, "Elven", -2, -10)
+            CursesFunctions.curses_center(stdscr, "Human", -2, 0)
+            CursesFunctions.curses_center(stdscr, "Orcish", -2, 10)
+            race_input = stdscr.getch()
+            race_selection = CursesFunctions.curses_getch_to_str(stdscr, race_input)
+            if race_selection == '1':
+                while True:
+                    CursesFunctions.curses_center(stdscr, "With rich history and customs rooted in the arcane arts, Elves are magically gifted but are less physically imposing than other races.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "+2 Intelligence\n-1 Strength", -7, 0)
+                    CursesFunctions.curses_center(stdscr, "(y/n)", -9, 0)
+                    confirm_input = stdscr.getch()
+                    confirm_selection = CursesFunctions.curses_getch_to_str(stdscr, confirm_input)
+                    if confirm_selection.lower() == 'y':
+                        self.player_race = 'Elf'
+                        self.player.intelligence += 2
+                        self.player.strength -= 1
+                        break
+                    elif confirm_selection.lower() == 'n':
+                        break
+                    else:
+                        continue
+                if confirm_selection.lower() == 'y':
+                    break
+            elif race_selection == '2':
+                while True:
+                    CursesFunctions.curses_center(stdscr, "Through time, the endurance of man in addition to their shorture stature has allowed the human race to stand out for its strong but nimble traits.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "+1 Agility\n+1 Strength\n-1 Intelligence", -7, 0)
+                    CursesFunctions.curses_center(stdscr, "(y/n)", -10, 0)
+                    confirm_input = stdscr.getch()
+                    confirm_selection = CursesFunctions.curses_getch_to_str(stdscr, confirm_input)
+                    if confirm_selection.lower() == 'y':
+                        self.player_race = 'Human'
+                        self.player.agility += 1
+                        self.player.strength += 1
+                        self.player.intelligence = 1
+                        break
+                    elif confirm_selection.lower() == 'n':
+                        break
+                    else:
+                        continue
+                if confirm_selection.lower() == 'y':
+                    break
+            elif race_selection == '3':
+                while True:
+                    CursesFunctions.curses_center(stdscr, "Cursed by the Gods and astrayed from their original Elven ancestry, the Orcish race has overcome their lack of divinity through physical strength, nothing is more commanding than an Orc with purpose.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "+2 Strength\n-1 Intelligence", -7, 0)
+                    CursesFunctions.curses_center(stdscr, "(y/n)", -9, 0)
+                    confirm_input = stdscr.getch()
+                    confirm_selection = CursesFunctions.curses_getch_to_str(stdscr, confirm_input)
+                    if confirm_selection.lower() == 'y':
+                        self.player_race = 'Orc'
+                        self.player.strength += 2
+                        self.player.intelligence = 1
+                        break
+                    elif confirm_selection.lower() == 'n':
+                        break
+                    else:
+                        continue
+                if confirm_selection.lower() == 'y':
+                    break
+            else:
+                continue
+
+        stdscr.clear()
+        while True:
+            curses.curs_set(0)
+            curses.echo(0)
+            stdscr.clear()
+            CursesFunctions.curses_center(stdscr, "Select Background (1-3) Or Return (r)", 0, 0)
+            CursesFunctions.curses_center(stdscr, "Noble", -2, -10)
+            CursesFunctions.curses_center(stdscr, "Outsider", -2, 0)
+            CursesFunctions.curses_center(stdscr, "Commoner", -2, 10)
+            background_input = stdscr.getch()
+            background_selection = CursesFunctions.curses_getch_to_str(stdscr, background_input)
+            if background_selection == '1':
+                while True:
+                    CursesFunctions.curses_center(stdscr, "Gold and glory, coming from a long lineage of wealth your adventure to the other side of the country brings something money cannot buy.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "+100 Gold", -6, 0)
+                    CursesFunctions.curses_center(stdscr, "(y/n)", -8, 0)
+                    confirm_input = stdscr.getch()
+                    confirm_selection = CursesFunctions.curses_getch_to_str(stdscr, confirm_input)
+                    if confirm_selection.lower() == 'y':
+                        self.player_background = 'Noble'
+                        self.player_gold += 100
+                        break
+                    elif confirm_selection.lower() == 'n':
+                        break
+                    else:
+                        continue
+                if confirm_selection.lower() == 'y':
+                    break
+            elif background_selection == '2':
+                while True:
+                    CursesFunctions.curses_center(stdscr, "Hailing from distant lands you find yourself in the land of temp_country seeking the other side which is talked of as the greatest adventure one could seek.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "+1 Agility", -6, 0)
+                    CursesFunctions.curses_center(stdscr, "(y/n)", -8, 0)
+                    confirm_input = stdscr.getch()
+                    confirm_selection = CursesFunctions.curses_getch_to_str(stdscr, confirm_input)
+                    if confirm_selection.lower() == 'y':
+                        self.player_background = 'Outsider'
+                        self.player.agility += 1
+                        break
+                    elif confirm_selection.lower() == 'n':
+                        break
+                    else:
+                        continue
+                if confirm_selection.lower() == 'y':
+                    break
+            elif background_selection == '3':
+                while True:
+                    CursesFunctions.curses_center(stdscr, "You are no stranger to hard work but you are a stranger to adventuring as you finally leave your home village in search of more than the working mans life through adventuring across temp_country.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "+1 Strength", -6, 0)
+                    CursesFunctions.curses_center(stdscr, "(y/n)", -8, 0)
+                    confirm_input = stdscr.getch()
+                    confirm_selection = CursesFunctions.curses_getch_to_str(stdscr, confirm_input)
+                    if confirm_selection.lower() == 'y':
+                        self.player_background = 'Commoner'
+                        self.player.strength += 1
+                        break
+                    elif confirm_selection.lower() == 'n':
+                        break
+                    else:
+                        continue
+                if confirm_selection.lower() == 'y':
+                    break
+            elif background_selection.lower() == 'r':
+                Game.character_creation(self, stdscr)
+            else:
+                continue
+        
+        self.player.refresh_attributes()
+        stdscr.clear()
+
     def menu(self, stdscr):
         curses.curs_set(0)
         curses.echo(0)
         stdscr.clear()
+        Game.level(self, stdscr)
+        self.player.update_attributes()
         Game.menu_hud(stdscr)
         self.stat_hud(stdscr)
         self.inventory_hud(stdscr)
@@ -117,12 +277,12 @@ class Game:
                 stdscr.move(y_cursor, x_cursor)
                 exit_input = stdscr.getch()
                 exit_choice = CursesFunctions.curses_getch_to_str(stdscr, exit_input)
-                if exit_choice == 'y' or exit_choice == 'Y':
+                if exit_choice.lower() == 'y':
                     keyboard.press_and_release('f11')
                     curses.endwin()
                     exit()
                     break
-                elif exit_choice == 'n' or exit_choice == 'N':
+                elif exit_choice.lower() == 'n':
                     self.menu(stdscr)
                     break
                 else:
@@ -140,29 +300,33 @@ class Game:
         CursesFunctions.curses_box(stdscr, 8, 21, hud_height, 0)
 
     def stat_hud(self, stdscr):
-        CursesFunctions.curses_center(stdscr, design.character_ascii, -15, -15)
+        CursesFunctions.curses_center(stdscr, design.character_ascii, -17, -15)
         CursesFunctions.curses_center(stdscr, f" {self.player_name}", -15, 0)
-        CursesFunctions.curses_box(stdscr, 2, len(self.player_name) + 1, -15, 0) #name box
-        CursesFunctions.curses_center(stdscr, f"Health - {self.player.health} / {self.max_health}", -17, 0)
-        CursesFunctions.curses_center(stdscr, f"Stamina - {self.player.stamina} / {self.max_stamina}", -18, 0)
-        CursesFunctions.curses_center(stdscr, f"Mana - {self.player.mana} / {self.max_mana}", -19, 0)
-        CursesFunctions.curses_center(stdscr, f"Strength - {self.player.strength}", -21, 0)
-        CursesFunctions.curses_center(stdscr, f"Agility - {self.player.agility}", -22, 0)
-        CursesFunctions.curses_center(stdscr, f"Intelligence - {self.player.intelligence}", -23, 0)
-        CursesFunctions.curses_box(stdscr, 13, 21, -20, 0) #stat box
+        #CursesFunctions.curses_box(stdscr, 2, len(self.player_name) + 1, -15, 0) #name box
+        CursesFunctions.curses_center(stdscr, self.player_race, -16, 0)
+        CursesFunctions.curses_center(stdscr, self.player_background, -17, 0)
+        CursesFunctions.curses_center(stdscr, f"XP - {self.player_level} - {self.player_level_progress} / 100", -18, 0)
+        CursesFunctions.curses_center(stdscr, f"Health - {self.player.health} / {self.player.max_health}", -20, 0)
+        CursesFunctions.curses_center(stdscr, f"Stamina - {self.player.stamina} / {self.player.max_stamina}", -21, 0)
+        CursesFunctions.curses_center(stdscr, f"Mana - {self.player.mana} / {self.player.max_mana}", -22, 0)
+        CursesFunctions.curses_center(stdscr, f"Strength - {self.player.strength}", -24, 0)
+        CursesFunctions.curses_center(stdscr, f"Agility - {self.player.agility}", -25, 0)
+        CursesFunctions.curses_center(stdscr, f"Intelligence - {self.player.intelligence}", -26, 0)
+        CursesFunctions.curses_box(stdscr, 15, 21, -21, 0) #stat box
 
     def inventory_hud(self, stdscr):
         if len(self.player_inventory.item_array) != 0:
             self.player_inventory.display_hud_inventory(stdscr)
             stdscr.refresh()
-        CursesFunctions.curses_center(stdscr, "Item | Damage | Durability", -5, 16)
-        CursesFunctions.curses_box(stdscr, 22, 35, -15, 30)
+        CursesFunctions.curses_center(stdscr, "Item | Damage | Durability", -6, 16)
+        CursesFunctions.curses_center(stdscr, f"Gold - {self.player_gold}", -26, 15)
+        CursesFunctions.curses_box(stdscr, 24, 35, -16, 30)
 
     def redraw_inventory_hud(stdscr):
         try:
             stdscr.move(-15, 10)
             stdscr.clrtoeol()
-            CursesFunctions.curses_box(stdscr, 22, 35, -15, 30)
+            CursesFunctions.curses_box(stdscr, 24, 35, -16, 30)
         except curses.error:
             pass
 
@@ -172,7 +336,7 @@ class Game:
             y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 8, 0)
             drop_select = CursesFunctions.curses_input(self, stdscr, y_cursor, x_cursor, '')
             drop_select = Game.input_validation(self.player_inventory.item_array, drop_select, stdscr)
-            if drop_select == 'r' or drop_select == 'R':
+            if str(drop_select).lower() == 'r':
                 return
             dropped_item = self.player_inventory.drop_item(int(drop_select))
             program_loop.Event.add_to_loot_event(dropped_item, node, stdscr, self)
@@ -211,21 +375,21 @@ class Game:
         
     def move(player_node, direction, stdscr):
         while True:
-            if direction == 'f' or direction == 'F':
+            if direction.lower() == 'f':
                 if player_node.next:
                     return player_node.next
                 else:
                     CursesFunctions.curses_center(stdscr, "No Space In Front", 8, 0)
                     stdscr.getch()
                     return player_node
-            elif direction == 'b' or direction == 'B':
+            elif direction.lower() == 'b':
                 if player_node.prev:
                     return player_node.prev
                 else:
                     CursesFunctions.curses_center(stdscr, "No Space Behind", 8, 0)
                     stdscr.getch()
                     return player_node
-            elif direction == 'r' or direction == 'R':
+            elif direction.lower() == 'r':
                 return player_node
             else:
                 CursesFunctions.curses_center(stdscr, "Invalid Input", 8, 0)
@@ -236,13 +400,13 @@ class Game:
                 continue
 
     def move_validation(player_node, direction):
-        if direction in ['f', 'F']:
+        if str(direction).lower() == 'f':
             return player_node.next is not None
-        elif direction in ['b', 'B']:
+        elif str(direction).lower() == 'b':
             return player_node.prev is not None
         
     def input_validation(list, selection, stdscr):
-        if selection == 'r' or selection == 'R':
+        if str(selection).lower() == 'r':
             return selection
         try:
             if selection == '':
@@ -258,6 +422,54 @@ class Game:
             return Game.input_validation(list, exception_input, stdscr)
             #return Game.input_validation(list, CursesFunctions.curses_input(CursesFunctions, stdscr, y_cursor, x_cursor, ''), stdscr)
         return int(selection) -1
+
+    def level(self, stdscr):
+        while self.player_level_progress >= 100:
+            self.player_level += 1
+            player_level_progress_extra = self.player_level_progress - 100
+            self.player_level_progress = 0
+            while True:
+                stdscr.clear()
+                CursesFunctions.curses_center(stdscr, "Level Up. Select Attribute To Increase (1-3)", 11, 0)
+                CursesFunctions.curses_center(stdscr, "Strength", 9, -10)
+                CursesFunctions.curses_center(stdscr, "Agility", 9, 0)
+                CursesFunctions.curses_center(stdscr, "Intelligence", 9, 10)
+                attribute_input = stdscr.getch()
+                attribute_selection = CursesFunctions.curses_getch_to_str(stdscr, attribute_input)
+                if attribute_selection == '1':
+                    confirm_selection = Game.confirm_function(stdscr)
+                    if confirm_selection == 'y':
+                        self.player.strength += 1
+                        break
+                elif attribute_selection == '2':
+                    confirm_selection = Game.confirm_function(stdscr)
+                    if confirm_selection == 'y':
+                        self.player.agility += 1
+                        break
+                elif attribute_selection == '3':
+                    confirm_selection = Game.confirm_function(stdscr)
+                    if confirm_selection == 'y':
+                        self.player.intelligence += 1
+                        break
+                else:
+                    continue
+            self.player_level_progress += player_level_progress_extra
+            if self.player_level_progress < 100:
+                Game.redraw_event_hud(stdscr)
+                return
+
+    def confirm_function(stdscr):
+        while True:
+            CursesFunctions.curses_center(stdscr, "(y/n)", 7, 0)
+            confirm_input = stdscr.getch()
+            confirm_selection = CursesFunctions.curses_getch_to_str(stdscr, confirm_input)
+            if confirm_selection.lower() in ['y', 'n']:
+                return confirm_selection.lower()
+
+    def xp_gain(self, min_xp_gain, max_xp_gain, stdscr):
+        xp_gain = random.randint(min_xp_gain, max_xp_gain)
+        self.player_level_progress += xp_gain
+        #CursesFunctions.curses_center(stdscr, f"You Gained {xp_gain}", 10, 0)
 
     def player_life_check(self, stdscr):
         if self.player.health <= 0:
