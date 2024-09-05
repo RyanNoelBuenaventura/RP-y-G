@@ -3,7 +3,7 @@ import random
 from main import *
 from character import *
 from program_loop import *
-
+from program_loop.item import *
 class Game:
     def __init__(self):
         self.head, self.tail = self.generate_world()
@@ -97,7 +97,7 @@ class Game:
             race_selection = CursesFunctions.curses_getch_to_str(stdscr, race_input)
             if race_selection == '1':
                 while True:
-                    CursesFunctions.curses_center(stdscr, "With rich history and customs rooted in the arcane arts, Elves are magically gifted but are less physically imposing than other races.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "With rich history and customs rooted in the arcane arts, Elves are magically gifted at the cost of being less physically imposing than other races.", -4, 0)
                     CursesFunctions.curses_center(stdscr, "+2 Intelligence\n-1 Strength", -7, 0)
                     CursesFunctions.curses_center(stdscr, "(y/n)", -9, 0)
                     confirm_input = stdscr.getch()
@@ -115,7 +115,7 @@ class Game:
                     break
             elif race_selection == '2':
                 while True:
-                    CursesFunctions.curses_center(stdscr, "Through time, the endurance of man in addition to their shorture stature has allowed the human race to stand out for its strong but nimble traits.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "Through time, the endurance and cunning of man in addition to their shorture stature has allowed the human race to thrive and conquer with their strong and nimble traits.", -4, 0)
                     CursesFunctions.curses_center(stdscr, "+1 Agility\n+1 Strength\n-1 Intelligence", -7, 0)
                     CursesFunctions.curses_center(stdscr, "(y/n)", -10, 0)
                     confirm_input = stdscr.getch()
@@ -134,7 +134,7 @@ class Game:
                     break
             elif race_selection == '3':
                 while True:
-                    CursesFunctions.curses_center(stdscr, "Cursed by the Gods and astrayed from their original Elven ancestry, the Orcish race has overcome their lack of divinity through physical strength, nothing is more commanding than an Orc with purpose.", -4, 0)
+                    CursesFunctions.curses_center(stdscr, "Cursed by the Gods and astrayed from their original Elven ancestry, the Orcish race has overcome their lack of divinity through physical strength, nothing is more commanding than the Orcish spirit.", -4, 0)
                     CursesFunctions.curses_center(stdscr, "+2 Strength\n-1 Intelligence", -7, 0)
                     CursesFunctions.curses_center(stdscr, "(y/n)", -9, 0)
                     confirm_input = stdscr.getch()
@@ -245,6 +245,11 @@ class Game:
             self.menu(stdscr)
         elif self.menu_choice == '2':
             while True:
+                attribute_manager = design.AttributeManager()
+                attribute_manager.initialize_attribute()
+                stdscr.attron(attribute_manager.grey_on_black)
+                Game.menu_hud(stdscr)
+                stdscr.attroff(attribute_manager.grey_on_black)
                 CursesFunctions.curses_center(stdscr, "Forward/Backward (f/b) Or Return (r)", 10, 0)
                 y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 8, 0)
                 stdscr.move(y_cursor, x_cursor)
@@ -262,9 +267,7 @@ class Game:
                     program_loop.Event.trigger_event(self.player_position, self, stdscr)
                 self.menu(stdscr)
         elif self.menu_choice == '3':
-            stdscr.addstr(self.player_name)
-            stdscr.getch()
-            self.player.health -= 10
+            Game.rest(self, stdscr)
             self.menu(stdscr)
         elif self.menu_choice == '4':
             Game.inventory_interact(self, self.player_position, stdscr)
@@ -332,6 +335,11 @@ class Game:
 
     def inventory_interact(self, node, stdscr):
         if len(self.player_inventory.item_array) != 0:
+            attribute_manager = design.AttributeManager()
+            attribute_manager.initialize_attribute()
+            stdscr.attron(attribute_manager.grey_on_black)
+            Game.menu_hud(stdscr)
+            stdscr.attroff(attribute_manager.grey_on_black)
             CursesFunctions.curses_center(stdscr, f"Select Item To Drop (1-{len(self.player_inventory.item_array)}) Or Return (r)", 10, 0)
             y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 8, 0)
             drop_select = CursesFunctions.curses_input(self, stdscr, y_cursor, x_cursor, '')
@@ -473,5 +481,44 @@ class Game:
 
     def player_life_check(self, stdscr):
         if self.player.health <= 0:
-            stdscr.addstr("Game Over")
+            stdscr.clear()
+            CursesFunctions.curses_center(stdscr, design.skull_2_ascii, 0, 0)
+            stdscr.getch()
+            keyboard.press_and_release('f11')
             exit()
+
+    def rest(self, stdscr):
+        Item().random_item(self.player_inventory, stdscr, self)
+        Game.inventory_hud(self, stdscr)
+        has_camping_supplies = False
+        for item in self.player_inventory.item_array:
+            if item['item_code'] == 'camping_supplies_1':
+                has_camping_supplies = True
+                break
+        if has_camping_supplies:
+            while True:
+                attribute_manager = design.AttributeManager()
+                attribute_manager.initialize_attribute()
+                stdscr.attron(attribute_manager.grey_on_black)
+                Game.menu_hud(stdscr)
+                stdscr.attroff(attribute_manager.grey_on_black)
+                CursesFunctions.curses_center(stdscr, "Use Camping Supplies To Rest?", 8, 0)
+                confirm_selection = Game.confirm_function(stdscr)
+                if confirm_selection == 'y':
+                    self.player.health = self.player.max_health
+                    self.player.stamina = self.player.max_stamina
+                    self.player.mana = self.player.max_mana
+                    self.player_inventory.item_array.remove(item)
+                    CursesFunctions.curses_center(stdscr, design.camp_ascii, 11, 0)
+                    #CursesFunctions.curses_center(stdscr, "As You Gaze Upon The Stars Your Vitality Returns To You", 11, 0)
+                    CursesFunctions.curses_center(stdscr, "Your Vitality Returns As You Let The Stars Magnificance Enfold You", -1, 0)
+                    stdscr.getch()
+                    break
+                elif confirm_selection == 'n':
+                    return
+                else:
+                    continue
+        else:
+            CursesFunctions.curses_center(stdscr, "You Do Not Have The Supplies Required To Camp", 8, 0)
+            stdscr.getch()
+            return

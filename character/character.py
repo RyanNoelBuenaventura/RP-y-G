@@ -91,7 +91,8 @@ class Character:
         mit_success = random.randint(5, 15)
         if mit_chance > mit_success:
             mitigated_damage = math.ceil(damage * 0.10)
-            CursesFunctions.curses_center(stdscr, f"Mitigated {mitigated_damage} Points of Damage", 2, 0)
+            mitigated_string = damage - mitigated_damage
+            CursesFunctions.curses_center(stdscr, f"Mitigated {mitigated_string} Points of Damage", 2, 0)
             stdscr.getch()
         return mitigated_damage       
 

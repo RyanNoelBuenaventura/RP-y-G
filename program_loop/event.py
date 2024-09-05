@@ -1,5 +1,5 @@
 import random
-from .game import *
+from program_loop.game import *
 from .curses_functions import *
 from character import *
 
@@ -69,7 +69,7 @@ class Event:
         CursesFunctions.curses_center(stdscr, f"Select Target (1-{max_target}) Or Return (r)", -1, 0)
         selected_target_input = stdscr.getch()
         selected_target = CursesFunctions.curses_getch_to_str(stdscr, selected_target_input)
-        selected_target = Game.input_validation(node.orc_character_list, selected_target, stdscr)
+        selected_target = Game.input_validation(combatant_list, selected_target, stdscr)
         if selected_target == "r" or selected_target == "R":
             return None
         else:
@@ -121,7 +121,7 @@ class Event:
                 node.orc_character_list.append(orc)
                 orc_weapon_list = Inventory(orc)
                 node.orc_inventory_list.append(orc_weapon_list)
-                Inventory.npc_add_item(orc_weapon_list, "orc_sword_1", "Orc Sword", [2, 3, 3])
+                Inventory.npc_add_item(orc_weapon_list, "orc_sword_1", "Orcish Sword", [3, 10, 10])
 
         while node.orc_character_list:
             if node.event not in node.events:
@@ -156,7 +156,7 @@ class Event:
                             Event.add_to_loot_event(dropped_item, node, stdscr, game)
                         node.orc_character_list.pop(selected_target)
                         node.orc_inventory_list.pop(selected_target)
-                        Game.xp_gain(game, 105, 106, stdscr)
+                        Game.xp_gain(game, 10, 20, stdscr)
                 #game.player_life_check(stdscr)
                 if not node.orc_character_list:
                     if node.event in node.events:
@@ -243,7 +243,6 @@ class Event:
             return
 
     def chest_encounter(node, inventory_array, character, stdscr, game):
-
         if node.event_completed == False:
             if node.event not in node.events:
                 node.events.append(node.event)
@@ -256,7 +255,7 @@ class Event:
             chest_choice = CursesFunctions.curses_getch_to_str(stdscr, chest_input)
             if chest_choice.lower() == 'y':
                 inventory_capacity = character.inventory_attributes()
-                over_encumber = inventory_array.add_item("diamondsword1", "Diamond Sword", [4, 2, 2], stdscr, game)
+                over_encumber = Item().random_misc_item(game.player_inventory, stdscr, game)
                 if over_encumber == False:
                     return node
                 if node.event in node.events:
