@@ -1,3 +1,5 @@
+#© 2024 Ryan Noel Buenaventura.
+
 import curses
 from curses.textpad import rectangle
 
@@ -5,12 +7,12 @@ class CursesFunctions:
     def curses_input(self, stdscr, r, c, prompt):
         curses.echo()
         stdscr.addstr(r,c,prompt)
-        input = stdscr.getstr().decode("utf-8")
+        input = stdscr.getstr().decode('utf-8')
         return input
     
     def curses_center(stdscr, text, y_offset, x_offset):
         y, x = stdscr.getmaxyx()
-        #create array of items if string uses newline
+        # create array of items if string uses newline
         lines = text.split('\n')
         h = (y // 2) - (len(lines) // 2)
         for line in lines:

@@ -1,3 +1,5 @@
+#© 2024 Ryan Noel Buenaventura.
+
 class MapDoublyNode:
     def __init__(self, val, event = None, event_completed = False, event_looted = False, flee_occur = False, flee_direction = None, node_loot = None, next = None, prev = None):
         self.val = val
@@ -21,7 +23,7 @@ class MapDoublyLinkedList:
         while curr:
             elements.append(str(curr.val))
             curr = curr.next
-        stdscr.addstr(' <-> '.join(elements))
+        stdscr.addstr(" <-> ".join(elements))
 
     def display_event(head, stdscr):
         curr = head

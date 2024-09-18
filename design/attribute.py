@@ -1,3 +1,5 @@
+#© 2024 Ryan Noel Buenaventura.
+
 from program_loop.curses_functions import *
 
 class AttributeManager:
@@ -6,10 +8,10 @@ class AttributeManager:
         self.bold_attr = None
 
     def initialize_attribute(self):
-    #initialize colors and pairs
+    # initialize colors and pairs
         if curses.has_colors():
             if curses.can_change_color():
-                curses.init_color(1, 500, 500, 500) #grey
+                curses.init_color(1, 500, 500, 500) # grey
 
             curses.init_pair(1, 1, curses.COLOR_BLACK)
 

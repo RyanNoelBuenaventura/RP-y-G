@@ -1,9 +1,12 @@
-import random
+#© 2024 Ryan Noel Buenaventura.
 
+import random
 from main import *
 from character import *
 from program_loop import *
 from program_loop.item import *
+from program_loop.magic import *
+
 class Game:
     def __init__(self):
         self.head, self.tail = self.generate_world()
@@ -12,7 +15,7 @@ class Game:
         self.loot = Inventory(self.world)
         self.base_health = 100
         self.base_stamina = 75
-        self.base_mana = 50
+        self.base_mana = 25
         self.max_health = 0
         self.max_stamina = 0
         self.max_mana = 0
@@ -21,8 +24,9 @@ class Game:
         self.mana = 0
         self.player_level = 1
         self.player_level_progress = 0
-        self.player = Character(self.health, self.stamina, self.mana, self.max_health, self.max_stamina, self.max_mana, self.base_health, self.base_stamina, self.base_mana, 2, 2, 2, self.player_level)
+        self.player = Character(self.health, self.stamina, self.mana, self.max_health, self.max_stamina, self.max_mana, self.base_health, self.base_stamina, self.base_mana, 3, 3, 3, self.player_level)
         self.player_inventory = Inventory(self.player)
+        self.player_spells = Magic(self.player)
         self.player_race = ''
         self.player_background = ''
         self.player_name = ''
@@ -31,7 +35,8 @@ class Game:
 
     def generate_world(self):
         self.head = self.tail = program_loop.MapDoublyNode(1, program_loop.Event.random_event())
-        for i in range (2, 11):
+        end_world = random.randint(15, 20)
+        for i in range (2, end_world):
             self.head, self.tail = program_loop.MapDoublyLinkedList.insert_at_end(self.head, self.tail, i, program_loop.Event.random_event())
         return self.head, self.tail
 
@@ -56,11 +61,7 @@ class Game:
             else:
                 break
         stdscr.clear()
-
-
-        
         self.character_creation(stdscr)
-
         curses.curs_set(1)
         while True:
             y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, -3, -9)
@@ -76,13 +77,13 @@ class Game:
             else:
                 break
 
-
-        
-        self.player_inventory.add_item("unarmed", "Unarmed", [0, float('inf'), float('inf')], stdscr, self)
+        self.player_inventory.add_item('unarmed', "Unarmed", [0, float('inf'), float('inf')], 'unarmed', 0, stdscr, self)
         # trigger event in first node
-        # Event.trigger_event(self.player_position, self, stdscr)
-        # if self.player_position.flee_occur:
-        #     self.player_position = Game.move(self.player_position, self.player_position.flee_direction, stdscr)
+        curses.curs_set(0)
+        curses.echo(0)
+        program_loop.Event.trigger_event(self.player_position, self, stdscr)
+        if self.player_position.flee_occur:
+            self.player_position = Game.move(self.player_position, self.player_position.flee_direction, stdscr)
 
     def character_creation(self, stdscr):
         while True:
@@ -229,6 +230,7 @@ class Game:
         stdscr.clear()
         Game.level(self, stdscr)
         self.player.update_attributes()
+        Game.player_life_check(self, stdscr)
         Game.menu_hud(stdscr)
         self.stat_hud(stdscr)
         self.inventory_hud(stdscr)
@@ -240,7 +242,7 @@ class Game:
         self.menu_choice = CursesFunctions.curses_getch_to_str(stdscr, menu_input)
 
         if self.menu_choice == '1':
-            #stdscr.addstr(str(self.player_position))
+            # stdscr.addstr(str(self.player_position))
             program_loop.Event.display_node_event(self.player_position, self, stdscr)
             self.menu(stdscr)
         elif self.menu_choice == '2':
@@ -273,6 +275,30 @@ class Game:
             Game.inventory_interact(self, self.player_position, stdscr)
             self.menu(stdscr)
         elif self.menu_choice == '5':
+            continue_study = True
+            while continue_study:
+                Game.redraw_lower_hud(self, stdscr)
+                continue_study = Magic(self).read(self.player_inventory.item_array, stdscr, self, '', 0, Game)
+                if continue_study:
+                    while True:
+                        CursesFunctions.curses_center(stdscr, "Continue Studies? (y/n)", 10, 0)
+                        continue_study_input = stdscr.getch()
+                        continue_study_selection = CursesFunctions.curses_getch_to_str(stdscr, continue_study_input)
+                        if str(continue_study_selection).lower() == 'y':
+                            continue_study = True
+                            break
+                        elif str(continue_study_selection).lower() == 'n':
+                            continue_study = False
+                            break
+                        else:
+                            continue
+            Game.redraw_lower_hud(self, stdscr)
+            selected_spell = Magic(self).select_spell(self, self.player_spells.spell_array, stdscr)
+            if selected_spell is not None:
+                event_in_progress = False
+                Character.cast(self.player, stdscr, selected_spell, self.player, self.player_spells, self.player_inventory, self, event_in_progress)
+            self.menu(stdscr)
+        elif self.menu_choice == '6':
             while True:
                 Game.redraw_ui(self, stdscr)
                 CursesFunctions.curses_center(stdscr, "Confirm Exit (y/n)", 10, 0)
@@ -297,7 +323,7 @@ class Game:
             self.menu(stdscr)
 
     def menu_hud(stdscr):
-        menu_string = "1 - Area\n2 - Move\n3 - Rest\n4 - Gear\n5 - Exit"
+        menu_string = "1 - Area\n2 - Move\n3 - Rest\n4 - Gear\n5 - Study\n6 - Exit"
         hud_height = -8
         CursesFunctions.curses_center(stdscr, menu_string, hud_height, 0)
         CursesFunctions.curses_box(stdscr, 8, 21, hud_height, 0)
@@ -305,7 +331,6 @@ class Game:
     def stat_hud(self, stdscr):
         CursesFunctions.curses_center(stdscr, design.character_ascii, -17, -15)
         CursesFunctions.curses_center(stdscr, f" {self.player_name}", -15, 0)
-        #CursesFunctions.curses_box(stdscr, 2, len(self.player_name) + 1, -15, 0) #name box
         CursesFunctions.curses_center(stdscr, self.player_race, -16, 0)
         CursesFunctions.curses_center(stdscr, self.player_background, -17, 0)
         CursesFunctions.curses_center(stdscr, f"XP - {self.player_level} - {self.player_level_progress} / 100", -18, 0)
@@ -315,56 +340,78 @@ class Game:
         CursesFunctions.curses_center(stdscr, f"Strength - {self.player.strength}", -24, 0)
         CursesFunctions.curses_center(stdscr, f"Agility - {self.player.agility}", -25, 0)
         CursesFunctions.curses_center(stdscr, f"Intelligence - {self.player.intelligence}", -26, 0)
-        CursesFunctions.curses_box(stdscr, 15, 21, -21, 0) #stat box
+        CursesFunctions.curses_box(stdscr, 15, 21, -21, 0) # stat box
 
     def inventory_hud(self, stdscr):
         if len(self.player_inventory.item_array) != 0:
             self.player_inventory.display_hud_inventory(stdscr)
             stdscr.refresh()
-        CursesFunctions.curses_center(stdscr, "Item | Damage | Durability", -6, 16)
-        CursesFunctions.curses_center(stdscr, f"Gold - {self.player_gold}", -26, 15)
-        CursesFunctions.curses_box(stdscr, 24, 35, -16, 30)
+        CursesFunctions.curses_center(stdscr, "Item | Damage | Durability", -6, 17)
+        CursesFunctions.curses_center(stdscr, f"Gold - {int(self.player_gold)}", -26, 15)
+        CursesFunctions.curses_box(stdscr, 24, 40, -16, 33)
 
     def redraw_inventory_hud(stdscr):
         try:
             stdscr.move(-15, 10)
             stdscr.clrtoeol()
-            CursesFunctions.curses_box(stdscr, 24, 35, -16, 30)
+            CursesFunctions.curses_box(stdscr, 24, 40, -16, 33)
         except curses.error:
             pass
 
     def inventory_interact(self, node, stdscr):
         if len(self.player_inventory.item_array) != 0:
-            attribute_manager = design.AttributeManager()
-            attribute_manager.initialize_attribute()
-            stdscr.attron(attribute_manager.grey_on_black)
-            Game.menu_hud(stdscr)
-            stdscr.attroff(attribute_manager.grey_on_black)
-            CursesFunctions.curses_center(stdscr, f"Select Item To Drop (1-{len(self.player_inventory.item_array)}) Or Return (r)", 10, 0)
-            y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 8, 0)
-            drop_select = CursesFunctions.curses_input(self, stdscr, y_cursor, x_cursor, '')
-            drop_select = Game.input_validation(self.player_inventory.item_array, drop_select, stdscr)
-            if str(drop_select).lower() == 'r':
-                return
-            dropped_item = self.player_inventory.drop_item(int(drop_select))
-            program_loop.Event.add_to_loot_event(dropped_item, node, stdscr, self)
-            Game.redraw_event_hud(stdscr)
+            while True:
+                Game.redraw_event_hud(stdscr)
+                attribute_manager = design.AttributeManager()
+                attribute_manager.initialize_attribute()
+                stdscr.attron(attribute_manager.grey_on_black)
+                Game.menu_hud(stdscr)
+                stdscr.attroff(attribute_manager.grey_on_black)
+                CursesFunctions.curses_center(stdscr, f"Select Item (1-{len(self.player_inventory.item_array)}) Or Return (r)", 10, 0)
+                y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 8, 0)
+                item_select = CursesFunctions.curses_input(self, stdscr, y_cursor, x_cursor, '')
+                item_select = Game.input_validation(self.player_inventory.item_array, item_select, stdscr)
+                if str(item_select).lower() == 'r':
+                    break
+                Game.redraw_event_hud(stdscr)
+                CursesFunctions.curses_center(stdscr, f"Drop (d) Use (u) Return (r)", 10, 0)
+                item_use_choice = CursesFunctions.curses_input(self, stdscr, y_cursor, x_cursor, '')
+                if item_use_choice.lower() == 'd':
+                    dropped_item = self.player_inventory.drop_item(int(item_select))
+                    program_loop.Event.add_to_loot_event(dropped_item, node, stdscr, self)
+                    Game.redraw_event_hud(stdscr)
+                    break
+                elif item_use_choice.lower() == 'u':
+                    selected_item_key = Inventory.item_key_retrieve(self.player_inventory, item_select)
+                    Item().use_item(selected_item_key, self, self.player_inventory.item_array, item_select)
+                    break
+                elif item_use_choice.lower() == 'r':
+                    continue
         else:
             CursesFunctions.curses_center(stdscr, "Inventory Empty", 9, 0)
             stdscr.getch()
 
     def event_hud(stdscr):
-        CursesFunctions.curses_box(stdscr, 30, 100, 12, 0) #name box
+        CursesFunctions.curses_box(stdscr, 30, 100, 12, 0) # name box
 
     def redraw_event_hud(stdscr):
         CursesFunctions.curses_clear_to_row(stdscr, 48) # clears screen until top of hud
         Game.event_hud(stdscr)
 
-    def redraw_orc_ui(self, stdscr):
+    def redraw_lower_hud(self, stdscr):
+        stdscr.clear()
+        Game.level(self, stdscr)
+        self.player.update_attributes()
+        Game.menu_hud(stdscr)
+        self.stat_hud(stdscr)
+        self.inventory_hud(stdscr)
+        Game.event_hud(stdscr)
+
+    def redraw_attack_ui(self, stdscr):
         attribute_manager = design.AttributeManager()
         attribute_manager.initialize_attribute()
         CursesFunctions.curses_clear_to_row(stdscr, 60) # clears screen until top of hud
-        CursesFunctions.curses_box(stdscr, 38, 100, 16, 0) #name box
+        CursesFunctions.curses_box(stdscr, 38, 100, 16, 0) # name box
         Game.inventory_hud(self, stdscr)
         stdscr.attron(attribute_manager.grey_on_black)
         Game.menu_hud(stdscr)
@@ -387,9 +434,13 @@ class Game:
                 if player_node.next:
                     return player_node.next
                 else:
-                    CursesFunctions.curses_center(stdscr, "No Space In Front", 8, 0)
+                    CursesFunctions.curses_clear_to_row(stdscr, 49)
+                    CursesFunctions.curses_center(stdscr, design.end_ascii, 15, 0)
+                    CursesFunctions.curses_center(stdscr, "Concluding Your Journey Across The Country, You Look Back Onto The Blazing Sunshine. The Rest Of The Day Is Yours, Temporarily Anyhow.", -1, 0)
                     stdscr.getch()
-                    return player_node
+                    keyboard.press_and_release('f11')
+                    exit()
+                    # return player_node
             elif direction.lower() == 'b':
                 if player_node.prev:
                     return player_node.prev
@@ -423,12 +474,11 @@ class Game:
                 raise ValueError
         except ValueError:
             Game.event_hud(stdscr)
-            #CursesFunctions.curses_center(stdscr, "Invalid Input", -2, 0)
-            #y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 7, 0)
+            # CursesFunctions.curses_center(stdscr, "Invalid Input", -2, 0)
+            # y_cursor, x_cursor = CursesFunctions.curses_center_insertion_point(stdscr, 7, 0)
             exception_input = stdscr.getch()
             exception_input = CursesFunctions.curses_getch_to_str(stdscr, exception_input)
             return Game.input_validation(list, exception_input, stdscr)
-            #return Game.input_validation(list, CursesFunctions.curses_input(CursesFunctions, stdscr, y_cursor, x_cursor, ''), stdscr)
         return int(selection) -1
 
     def level(self, stdscr):
@@ -477,7 +527,7 @@ class Game:
     def xp_gain(self, min_xp_gain, max_xp_gain, stdscr):
         xp_gain = random.randint(min_xp_gain, max_xp_gain)
         self.player_level_progress += xp_gain
-        #CursesFunctions.curses_center(stdscr, f"You Gained {xp_gain}", 10, 0)
+        # CursesFunctions.curses_center(stdscr, f"You Gained {xp_gain}", 10, 0)
 
     def player_life_check(self, stdscr):
         if self.player.health <= 0:
@@ -488,7 +538,6 @@ class Game:
             exit()
 
     def rest(self, stdscr):
-        Item().random_item(self.player_inventory, stdscr, self)
         Game.inventory_hud(self, stdscr)
         has_camping_supplies = False
         for item in self.player_inventory.item_array:
@@ -510,7 +559,7 @@ class Game:
                     self.player.mana = self.player.max_mana
                     self.player_inventory.item_array.remove(item)
                     CursesFunctions.curses_center(stdscr, design.camp_ascii, 11, 0)
-                    #CursesFunctions.curses_center(stdscr, "As You Gaze Upon The Stars Your Vitality Returns To You", 11, 0)
+                    # CursesFunctions.curses_center(stdscr, "As You Gaze Upon The Stars Your Vitality Returns To You", 11, 0)
                     CursesFunctions.curses_center(stdscr, "Your Vitality Returns As You Let The Stars Magnificance Enfold You", -1, 0)
                     stdscr.getch()
                     break

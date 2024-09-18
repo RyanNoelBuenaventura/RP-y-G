@@ -1,7 +1,6 @@
-#Ryan Noel Buenaventura
+#© 2024 Ryan Noel Buenaventura.
 
 import keyboard
-
 import program_loop
 from character import *
 import design
