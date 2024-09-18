@@ -1,6 +1,7 @@
 #© 2024 Ryan Noel Buenaventura.
 
 import random
+import sys
 from main import *
 from character import *
 from program_loop import *
@@ -57,8 +58,9 @@ class Game:
             stdscr.attroff(attribute_manager.grey_on_black)
             start_input = stdscr.getch()
             if start_input == 27:
+                curses.endwin()
                 keyboard.press_and_release('f11')
-                exit()
+                sys.exit()
             if start_input == curses.KEY_RESIZE or start_input == curses.KEY_F11:
                 continue
             else:
