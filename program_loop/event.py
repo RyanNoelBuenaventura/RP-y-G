@@ -261,7 +261,7 @@ class Event:
                 selected_item = Event.items_interact(node, game, item_amount, stdscr)
             elif event_choice == '4':
                 while True:
-                    selected_target = Event.select_target(node, game, node.combatant_amount, node.combatant_character_list, stdscr, event_ascii)
+                    selected_target = Event.combat_select_target(node, game, node.combatant_amount, node.combatant_character_list, stdscr, event_ascii)
                     if selected_target == None:
                         break
                     selected_spell = Magic(game).select_spell(game, game.player_spells.spell_array, stdscr)
