@@ -56,6 +56,30 @@ fight_ascii = r"""
 https://ascii.co.uk/art/fight
 """
 
+backpack_ascii = r"""
+    .eec.              .e$$$c
+   z$*"*$$eec..       zP  .3$c
+  .$"  d$"  ""'****bee*=*"" *$
+  $%  d$$                   ^$%
+ .$  z$%$bc.                 $%
+ 4F 4$" $"^$*ec..  .ee.    ./" b
+ dF $P  P  F   ""'""3F""'""'   4
+  ^$F   .......     $F        .F
+   $"  z"     ^""'""$F""''""'""%.
+  4F  ^L    4$     z%"c    *.    b
+  d    ^$*=e$$eer=$"  "be..JL..ee*
+  $     $   $F    $   zP   4P   F
+ 4%     F   $F     F $"   zP   P
+ *      '.       .$$.       .$
+ '       ^"****""'  "*******$"
+    ^"%4c...        ...zed*
+          ^""'""'""
+"""
+"""
+\n@notes\n
+https://asciiart.website/index.php?art=sports%20and%20activities/camping
+"""
+
 orc_ascii = r"""
             (    )
             ((((()))
@@ -127,6 +151,20 @@ ____/______/______/______/______/_____"=.o|o_.--""___/______/______/______/____
 """
 \n@notes\n
 https://ascii.co.uk/art/treasure
+"""
+
+basket_ascii = r"""
+     ..
+     |\\
+.====^^\\==.
+|\     ||  |\
+:X"====^^===='
+ \|XXXXXXXXXX|
+  ""'""'""'""
+"""
+"""
+\n@notes\n
+https://ascii.co.uk/art/basket
 """
 
 anvil_ascii = r"""

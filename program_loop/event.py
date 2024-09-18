@@ -94,20 +94,6 @@ class Event:
             return None
         else:
             return selected_item
-        
-    def items_interact(node, game, max_item, stdscr):
-        while True:
-            Game.redraw_event_hud(stdscr)
-            CursesFunctions.curses_center(stdscr, f"Select Item (1-{max_item}) Or Return (r)", -1, 15)
-            selected_item_input = stdscr.getch()
-            selected_item = CursesFunctions.curses_getch_to_str(stdscr, selected_item_input)
-            selected_item_validation = Game.input_validation(game.player_inventory.item_array, selected_item, stdscr)
-            if selected_item.lower() == 'r':
-                return None
-            else:
-                index = int(selected_item) - 1
-                selected_item_key = Inventory.item_key_retrieve(game.player_inventory, selected_item_validation)
-                Item().use_item(selected_item_key, game, game.player_inventory.item_array, index)
 
     def combat_select_target(node, game, max_target, combatant_list, stdscr, event_ascii):
         Game.redraw_event_hud(stdscr)
@@ -145,10 +131,14 @@ class Event:
             Game.redraw_event_hud(stdscr)
             CursesFunctions.curses_center(stdscr, design.fight_ascii, 8, 0)
             CursesFunctions.curses_center(stdscr, f"Combatant {i + 1} Attacks", 3, 0)
-            stdscr.getch()
+            # below adds a pause, removed for better flow
+            # stdscr.getch()
             # attack player, use first item in inventory, use the corresponding combatants inventory list, game, curses functionality
             combatant.attack(game.player, 0, combatant_inventory_list[i], game, stdscr)
-        Game.player_life_check(game, stdscr)
+            Game.redraw_lower_hud(game, stdscr)
+            game_state = Game.player_life_check(game, stdscr, None)
+            if game_state == 'restart':
+                Game.menu(game, stdscr, game_state)
         return
 
     def attack_event(node, game, stdscr, combatant_health, combatant_stamina, combatant_mana, combatant_strength, combatant_agility, combatant_intelligence, combatant_level, event_ascii, combatant_character_list, combatant_inventory_list):
@@ -214,7 +204,7 @@ class Event:
 
             elif event_choice == '2':
                 while True:
-                    Game.player_life_check(game, stdscr)
+                    Game.player_life_check(game, stdscr, None)
                     if game.player.stamina > 0:
                         Game.redraw_lower_hud(game, stdscr)
                         Game.redraw_event_hud(stdscr)
@@ -235,15 +225,17 @@ class Event:
                             if flee_chance >= flee_success:
                                 CursesFunctions.curses_center(stdscr, "Flee Success", 1, 0)
                                 stdscr.getch()
+                                game.player.stamina -= random.randint(0, 5)
                                 node.flee_occur = True
                                 node.flee_direction = direction
+                                stdscr.refresh()
                                 node.event = Event.attack_event
                                 return
                             else:
                                 CursesFunctions.curses_center(stdscr, "Flee Failed", 1, 0)
                                 stdscr.getch()
-                                game.player.health -= 10
-                                game.player.stamina -= 10
+                                game.player.health -= random.randint(0, 10)
+                                game.player.stamina -= random.randint(0, 10)
                                 Game.stat_hud(game, stdscr)
                                 continue
                         elif direction.lower() == 'r':
@@ -258,7 +250,8 @@ class Event:
                         break
             elif event_choice == '3':
                 item_amount = len(game.player_inventory.item_array)
-                selected_item = Event.items_interact(node, game, item_amount, stdscr)
+                #selected_item = Event.items_interact(node, game, item_amount, stdscr)
+                Game.inventory_interact(game, node, stdscr)
             elif event_choice == '4':
                 while True:
                     selected_target = Event.combat_select_target(node, game, node.combatant_amount, node.combatant_character_list, stdscr, event_ascii)
@@ -382,21 +375,23 @@ class Event:
                 Item().random_misc_item(node.shop_item_list, stdscr, game)
                 
         CursesFunctions.curses_clear_to_row(stdscr, 40)
-        # CursesFunctions.curses_center(stdscr, design.shop_ascii, 15, 0)
-        Game.redraw_ui(game, stdscr)
         curses.echo(0)
+        CursesFunctions.curses_center(stdscr, design.basket_ascii, 15, 0)
+        Game.redraw_ui(game, stdscr)
         CursesFunctions.curses_center(stdscr, "You Encounter A Shop - Enter (y/n)", 3, 0)
         shop_input = stdscr.getch()
         shop_choice = CursesFunctions.curses_getch_to_str(stdscr, shop_input)
         if shop_choice.lower() == 'y':
             while True:
                 Game.redraw_event_hud(stdscr)
+                CursesFunctions.curses_center(stdscr, design.basket_ascii, 15, 0)
                 CursesFunctions.curses_center(stdscr, "Buy Or Sell (b/s) Or Return (r)", 3, 0)
                 buy_or_sell_input = stdscr.getch()
                 buy_or_sell_select = CursesFunctions.curses_getch_to_str(stdscr, buy_or_sell_input)
                 if buy_or_sell_select.lower() == 'b':
                     if len(node.shop_item_list.item_array) <= 0:
                         Game.redraw_event_hud(stdscr)
+                        CursesFunctions.curses_center(stdscr, design.basket_ascii, 15, 0)
                         CursesFunctions.curses_center(stdscr, "Shop Out Of Supply", 3, 0)
                         stdscr.getch()
                         continue
@@ -404,48 +399,53 @@ class Event:
                         while True:
                             Game.redraw_event_hud(stdscr)
                             node.shop_item_list.display_inventory(stdscr)
+                            CursesFunctions.curses_center(stdscr, design.basket_ascii, 15, 0)
                             buy_amount = len(node.shop_item_list.item_array)
                             CursesFunctions.curses_center(stdscr, f"Select Item (1-{buy_amount}) Or Return (r)", -1, 0)
                             buy_select = Event.select_item(node, game, buy_amount, stdscr, None, node.shop_item_list)
                             if buy_select == None:
                                 break
-                            Game.redraw_event_hud(stdscr)
-                            CursesFunctions.curses_center(stdscr, f"Confirm Transaction Of {node.shop_item_list.item_array[buy_select]['item_price']} Gold (y/n)", 3, 0)
-                            buy_confirm_input = stdscr.getch()
-                            buy_confirm_select = CursesFunctions.curses_getch_to_str(stdscr, buy_confirm_input)
-                            if buy_confirm_select.lower() == 'y':
-                                inventory_capacity = character.inventory_attributes()
-                                if inventory_capacity <= len(game.player_inventory.item_array):
-                                    Game.redraw_event_hud(stdscr)
-                                    CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
-                                    stdscr.getch()
-                                    continue
-                                price = int(node.shop_item_list.item_array[buy_select]['item_price'])
-                                if price > game.player_gold:
-                                    Game.redraw_event_hud(stdscr)
-                                    CursesFunctions.curses_center(stdscr, "Too Expensive!", 3, 0)
-                                    stdscr.getch()
-                                    continue
+                            while True:
+                                Game.redraw_event_hud(stdscr)
+                                CursesFunctions.curses_center(stdscr, design.basket_ascii, 15, 0)
+                                CursesFunctions.curses_center(stdscr, f"Confirm Transaction Of {node.shop_item_list.item_array[buy_select]['item_price']} Gold (y/n)", 3, 0)
+                                buy_confirm_input = stdscr.getch()
+                                buy_confirm_select = CursesFunctions.curses_getch_to_str(stdscr, buy_confirm_input)
+                                if buy_confirm_select.lower() == 'y':
+                                    inventory_capacity = character.inventory_attributes()
+                                    if inventory_capacity <= len(game.player_inventory.item_array):
+                                        Game.redraw_event_hud(stdscr)
+                                        CursesFunctions.curses_center(stdscr, "You Are Over-Encumbered", 10, 0)
+                                        stdscr.getch()
+                                        continue
+                                    price = int(node.shop_item_list.item_array[buy_select]['item_price'])
+                                    if price > game.player_gold:
+                                        Game.redraw_event_hud(stdscr)
+                                        CursesFunctions.curses_center(stdscr, "Too Expensive!", 3, 0)
+                                        stdscr.getch()
+                                        continue
+                                    else:
+                                        game.player_gold -= price
+                                        Inventory.add_item(game.player_inventory, node.shop_item_list.item_array[buy_select]['item_code'], node.shop_item_list.item_array[buy_select]['item_name'], [node.shop_item_list.item_array[buy_select]['item_statistics']['damage'], node.shop_item_list.item_array[buy_select]['item_statistics']['durability'], node.shop_item_list.item_array[buy_select]['item_statistics']['max_durability']], node.shop_item_list.item_array[buy_select]['item_special'], node.shop_item_list.item_array[buy_select]['item_price'], stdscr, game)
+                                    Inventory.drop_item(node.shop_item_list, buy_select)
+                                    Game.redraw_lower_hud(game, stdscr)
+                                    if len(node.shop_item_list.item_array) <= 0:
+                                        node.out_of_supply = True
+                                    break
+                            
+                                elif buy_confirm_select.lower() == 'n':
+                                    break
                                 else:
-                                    game.player_gold -= price
-                                    Inventory.add_item(game.player_inventory, node.shop_item_list.item_array[buy_select]['item_code'], node.shop_item_list.item_array[buy_select]['item_name'], [node.shop_item_list.item_array[buy_select]['item_statistics']['damage'], node.shop_item_list.item_array[buy_select]['item_statistics']['durability'], node.shop_item_list.item_array[buy_select]['item_statistics']['max_durability']], node.shop_item_list.item_array[buy_select]['item_special'], node.shop_item_list.item_array[buy_select]['item_price'], stdscr, game)
-                                Inventory.drop_item(node.shop_item_list, buy_select)
-                                Game.redraw_lower_hud(game, stdscr)
-                                if len(node.shop_item_list.item_array) <= 0:
-                                     node.out_of_supply = True
-                                break
-                            elif buy_confirm_select.lower() == 'n':
-                                break
-                            else:
-                                continue
+                                    continue
                         continue
 
                 elif buy_or_sell_select.lower() == 's':
                     while True:
                         Game.redraw_event_hud(stdscr)
                         sell_amount = len(game.player_inventory.item_array)
-                        sell_select = Event.select_item(node, game, sell_amount, stdscr, None, game.player_inventory)
+                        sell_select = Event.select_item(node, game, sell_amount, stdscr, design.basket_ascii, game.player_inventory)
                         if not game.player_inventory:
+                            CursesFunctions.curses_center(stdscr, design.basket_ascii, 15, 0)
                             CursesFunctions.curses_center(stdscr, "Inventory Empty", 3, 0)
                             stdscr.getch()
                             break
@@ -453,11 +453,13 @@ class Event:
                             break
                         elif 'unarmed' in inventory_array.item_array[sell_select]['item_special']:
                             Game.redraw_event_hud(stdscr)
+                            CursesFunctions.curses_center(stdscr, design.basket_ascii, 15, 0)
                             CursesFunctions.curses_center(stdscr, "You Offer Your Fists To The Shop Owner, They Were Unpleased.", 3, 0)
                             stdscr.getch()
                             continue
                         while True:
                             Game.redraw_event_hud(stdscr)
+                            CursesFunctions.curses_center(stdscr, design.basket_ascii, 15, 0)
                             CursesFunctions.curses_center(stdscr, f"Confirm Transaction Of {inventory_array.item_array[sell_select]['item_price']} Gold (y/n)", 3, 0)
                             sale_confirm_input = stdscr.getch()
                             sale_confirm_select = CursesFunctions.curses_getch_to_str(stdscr, sale_confirm_input)
@@ -495,9 +497,9 @@ class Event:
             if node.event not in node.events:
                 node.events.append(node.event)
             CursesFunctions.curses_clear_to_row(stdscr, 40)
+            curses.echo(0)
             CursesFunctions.curses_center(stdscr, design.anvil_ascii, 15, 0)
             Game.redraw_ui(game, stdscr)
-            curses.echo(0)
             CursesFunctions.curses_center(stdscr, "You Encounter A Smith - Enter (y/n)", 3, 0)
             smith_input = stdscr.getch()
             smith_choice = CursesFunctions.curses_getch_to_str(stdscr, smith_input)

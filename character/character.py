@@ -97,6 +97,8 @@ class Character:
                 game.player_inventory.display_hud_inventory(stdscr)
                 program_loop.Game.redraw_event_hud(stdscr)
                 program_loop.Game.redraw_ui(game, stdscr)
+            # below redraws lower hud directly when attack happens to update health, stamina, mana but instead i have it update in the attack event so that it is slowly revealed to player
+            # program_loop.Game.redraw_lower_hud(game, stdscr)
             return target.health
         else:
             CursesFunctions.curses_center(stdscr, "No Stamina!", 1, 0)

@@ -60,7 +60,7 @@ class Item:
         item_name, item_stats, item_special, item_price = item_list[item_key]
         Inventory.add_item(character_item_list, item_key, item_name, item_stats, item_special, item_price, stdscr, game)
 
-    def use_item(self, item_key, game, character_item_list, item_index):
+    def use_item(self, item_key, game, character_item_list, item_index, stdscr):
         item = None
         if item_key in self.misc_list:
             item = self.misc_list[item_key]
@@ -76,5 +76,6 @@ class Item:
             elif item_key == 'mana_potion_1':
                 game.player.mana += 10
                 character_item_list.pop(int(item_index))
+            game.redraw_lower_hud(stdscr)
         else:
             return
