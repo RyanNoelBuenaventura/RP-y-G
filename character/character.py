@@ -115,8 +115,7 @@ class Character:
         if selected_spell_index == None:
             return
         if caster.mana <= 0:
-            Magic.clear_magic_hud(stdscr)
-            CursesFunctions.curses_center(stdscr, "No Mana!", -1, 0)
+            CursesFunctions.curses_center(stdscr, "No Mana!", 3, 0)
             stdscr.getch()
             return
         selected_spell = magic_instance.spell_array[selected_spell_index]
@@ -140,6 +139,9 @@ class Character:
         if spell_name in spell_effects:
             spell_effects[spell_name]()
         caster.mana -= spell_statistics['cost']
+        CursesFunctions.curses_center(stdscr, f"You Cast {spell_name}!", 3, 0)
+        program_loop.Game.redraw_ui(game, stdscr)
+        stdscr.getch()
 
     def mitigate(self, damage, stdscr):
         mitigated_damage = damage

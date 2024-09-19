@@ -95,6 +95,28 @@ class Event:
         else:
             return selected_item
 
+    def select_target(game, min_target, max_target, combatant_list, stdscr, event_ascii):
+        while True:
+            Game.redraw_event_hud(stdscr)
+            #Game.redraw_attack_ui(game, stdscr)
+            if event_ascii:
+                CursesFunctions.curses_center(stdscr, event_ascii, 22, 0)
+            if combatant_list:
+                Character.display_targets(combatant_list, combatant_list, stdscr)
+            CursesFunctions.curses_center(stdscr, f"Select Target ({min_target}-{max_target}) - Select Self (0) - Return (r)", -1, 0)
+            selected_target_input = stdscr.getch()
+            selected_target = CursesFunctions.curses_getch_to_str(stdscr, selected_target_input)
+            if selected_target == '0':
+                selected_target = 0
+                return selected_target
+            if selected_target == 'r' or selected_target == 'R':
+                return None
+            if combatant_list:
+                selected_target = Game.input_validation(combatant_list, selected_target, stdscr)
+                return selected_target
+            continue
+
+
     def combat_select_target(node, game, max_target, combatant_list, stdscr, event_ascii):
         Game.redraw_event_hud(stdscr)
         Game.redraw_attack_ui(game, stdscr)
@@ -136,9 +158,7 @@ class Event:
             # attack player, use first item in inventory, use the corresponding combatants inventory list, game, curses functionality
             combatant.attack(game.player, 0, combatant_inventory_list[i], game, stdscr)
             Game.redraw_lower_hud(game, stdscr)
-            game_state = Game.player_life_check(game, stdscr, None)
-            if game_state == 'restart':
-                Game.menu(game, stdscr, game_state)
+            Game.player_life_check(game, stdscr)
         return
 
     def attack_event(node, game, stdscr, combatant_health, combatant_stamina, combatant_mana, combatant_strength, combatant_agility, combatant_intelligence, combatant_level, event_ascii, combatant_character_list, combatant_inventory_list):
@@ -204,7 +224,7 @@ class Event:
 
             elif event_choice == '2':
                 while True:
-                    Game.player_life_check(game, stdscr, None)
+                    Game.player_life_check(game, stdscr)
                     if game.player.stamina > 0:
                         Game.redraw_lower_hud(game, stdscr)
                         Game.redraw_event_hud(stdscr)
@@ -224,8 +244,8 @@ class Event:
                             flee_success = random.randint(1,10)
                             if flee_chance >= flee_success:
                                 CursesFunctions.curses_center(stdscr, "Flee Success", 1, 0)
-                                stdscr.getch()
                                 game.player.stamina -= random.randint(0, 5)
+                                stdscr.getch()
                                 node.flee_occur = True
                                 node.flee_direction = direction
                                 stdscr.refresh()
@@ -233,10 +253,10 @@ class Event:
                                 return
                             else:
                                 CursesFunctions.curses_center(stdscr, "Flee Failed", 1, 0)
-                                stdscr.getch()
                                 game.player.health -= random.randint(0, 10)
                                 game.player.stamina -= random.randint(0, 10)
                                 Game.stat_hud(game, stdscr)
+                                stdscr.getch()
                                 continue
                         elif direction.lower() == 'r':
                             Event.attack_event(node, game, stdscr, node.combatant_health, node.combatant_stamina, node.combatant_mana, node.combatant_strength, node.combatant_agility, node.combatant_intelligence, node.combatant_level, node.event_ascii, node.combatant_character_list, node.combatant_inventory_list)
@@ -257,15 +277,19 @@ class Event:
                     selected_target = Event.combat_select_target(node, game, node.combatant_amount, node.combatant_character_list, stdscr, event_ascii)
                     if selected_target == None:
                         break
-                    selected_spell = Magic(game).select_spell(game, game.player_spells.spell_array, stdscr)
-                    event_in_progress = True
-                    if str(selected_target) == '0':
-                        selected_target = game.player
-                        Character.cast(game.player, stdscr, selected_spell, selected_target, game.player_spells, game.player_inventory, node, event_in_progress)
-                        break
-                    if selected_spell is not None:
-                        Character.cast(game.player, stdscr, selected_spell, node.combatant_character_list[selected_target], game.player_spells, game.player_inventory, node, event_in_progress)
-                        break
+                    while True:
+                        selected_spell = Magic(game).select_spell(game, game.player_spells.spell_array, stdscr)
+                        event_in_progress = True
+                        if selected_spell is None:
+                            break
+                        if str(selected_target) == '0':
+                            selected_target = game.player
+                            Character.cast(game.player, stdscr, selected_spell, selected_target, game.player_spells, game.player_inventory, game, event_in_progress)
+                            selected_target = '0'
+                            continue
+                        if selected_spell is not None:
+                            Character.cast(game.player, stdscr, selected_spell, node.combatant_character_list[(selected_target)], game.player_spells, game.player_inventory, game, event_in_progress)
+                            continue
             else:
                 Event.attack_event(node, game, stdscr, node.combatant_health, node.combatant_stamina, node.combatant_mana, node.combatant_strength, node.combatant_agility, node.combatant_intelligence, node.combatant_level, node.event_ascii, node.combatant_character_list, node.combatant_inventory_list)
         if not node.combatant_character_list:
@@ -523,7 +547,7 @@ class Event:
                     Game.redraw_event_hud(stdscr)
                     CursesFunctions.curses_center(stdscr, design.anvil_ascii, 15, 0)
                     node.repair_price = (inventory_array.item_array[selected_item]['item_price'] / 3) + random.randint(0, 5)
-                    CursesFunctions.curses_center(stdscr, f"Repair For {int(node.repair_price)} (y/n)", 3, 0)
+                    CursesFunctions.curses_center(stdscr, f"Repair For {int(node.repair_price)} Gold (y/n)", 3, 0)
                     confirm_input = stdscr.getch()
                     confirm_choice = CursesFunctions.curses_getch_to_str(stdscr, confirm_input)
                     if confirm_choice.lower() == 'y' and game.player_gold >= node.repair_price:

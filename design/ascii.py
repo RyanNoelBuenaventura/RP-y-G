@@ -235,6 +235,27 @@ $R@i.~~ !     :   ~$$$$$B$$en:``
 https://ascii.co.uk/art/skulls
 """
 
+magic_ascii= r"""
+         .                      .
+         .                      ;
+         :                  - --+- -
+         !           .          !
+         |        .             .
+         |_         +
+      ,  | `.
+--- --+-<#>-+- ---  --  -
+      `._|_,'
+         T
+         |
+         !
+         :         . : 
+         .       *
+"""
+"""
+\n@notes\n
+https://ascii.co.uk/art/star
+"""
+
 camp_ascii = r"""
             *      .         .                   .
     .                                      *         .         *

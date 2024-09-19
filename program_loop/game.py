@@ -231,13 +231,8 @@ class Game:
         self.player.refresh_attributes()
         stdscr.clear()
 
-
-    def menu(self, stdscr, game_state):
-        if game_state == 'restart':
-            raise RestartException()
-        game_state = Game.player_life_check(self, stdscr, game_state)
-        if game_state == 'restart':
-            raise RestartException()
+    def menu(self, stdscr):
+        Game.player_life_check(self, stdscr)
         curses.curs_set(0)
         curses.echo(0)
         stdscr.clear()
@@ -256,7 +251,7 @@ class Game:
         if self.menu_choice == '1':
             # stdscr.addstr(str(self.player_position))
             program_loop.Event.display_node_event(self.player_position, self, stdscr)
-            self.menu(stdscr, game_state)
+            self.menu(stdscr)
         elif self.menu_choice == '2':
             while True:
                 attribute_manager = design.AttributeManager()
@@ -279,37 +274,47 @@ class Game:
                 while self.player_position.flee_occur:
                     self.player_position = Game.move(self.player_position, self.player_position.flee_direction, stdscr)
                     program_loop.Event.trigger_event(self.player_position, self, stdscr)
-                self.menu(stdscr, game_state)
+                self.menu(stdscr)
         elif self.menu_choice == '3':
             Game.rest(self, stdscr)
-            self.menu(stdscr, game_state)
+            self.menu(stdscr)
         elif self.menu_choice == '4':
             Game.inventory_interact(self, self.player_position, stdscr)
-            self.menu(stdscr, game_state)
+            self.menu(stdscr)
         elif self.menu_choice == '5':
-            continue_study = True
-            while continue_study:
+            while True:
+                study_choice = True
+                while study_choice:
+                    Game.redraw_lower_hud(self, stdscr)
+                    study_choice = Magic(self).read(self.player_inventory.item_array, stdscr, self, '', 0, Game)
+                    if study_choice == 'r' or study_choice == 'c':
+                        break
+                    break
+                if study_choice == 'r':
+                    self.menu(stdscr)
                 Game.redraw_lower_hud(self, stdscr)
-                continue_study = Magic(self).read(self.player_inventory.item_array, stdscr, self, '', 0, Game)
-                if continue_study:
+                if study_choice == 'c':
                     while True:
-                        CursesFunctions.curses_center(stdscr, "Continue Studies? (y/n)", 10, 0)
-                        continue_study_input = stdscr.getch()
-                        continue_study_selection = CursesFunctions.curses_getch_to_str(stdscr, continue_study_input)
-                        if str(continue_study_selection).lower() == 'y':
-                            continue_study = True
+                        #Game.draw_magic_hud(self, stdscr)
+                        selected_target = program_loop.Event.select_target(self, 0, 0, None, stdscr, None)
+                        if selected_target == None:
                             break
-                        elif str(continue_study_selection).lower() == 'n':
-                            continue_study = False
-                            break
+                        elif selected_target == 0:
+                            selected_target = self.player
                         else:
                             continue
-            Game.redraw_lower_hud(self, stdscr)
-            selected_spell = Magic(self).select_spell(self, self.player_spells.spell_array, stdscr)
-            if selected_spell is not None:
-                event_in_progress = False
-                Character.cast(self.player, stdscr, selected_spell, self.player, self.player_spells, self.player_inventory, self, event_in_progress)
-            self.menu(stdscr, game_state)
+                        while True:
+                            selected_spell = Magic(self).select_spell(self, self.player_spells.spell_array, stdscr)
+                            if selected_spell is None:
+                                break
+                            event_in_progress = False
+                            Character.cast(self.player, stdscr, selected_spell, selected_target, self.player_spells, self.player_inventory, self, event_in_progress)
+                            Game.redraw_lower_hud(self, stdscr)
+                            continue
+                    continue
+                else:
+                    continue
+                # self.menu(stdscr)
         elif self.menu_choice == '6':
             while True:
                 Game.redraw_ui(self, stdscr)
@@ -322,7 +327,7 @@ class Game:
                     raise RestartException()
                     break
                 elif exit_choice.lower() == 'n':
-                    self.menu(stdscr, game_state)
+                    self.menu(stdscr)
                     break
                 else:
                     Game.redraw_event_hud(stdscr)
@@ -330,7 +335,7 @@ class Game:
                     CursesFunctions.curses_center(stdscr, "Invalid Input", 8, 0)
                     continue
         else:
-            self.menu(stdscr, game_state)
+            self.menu(stdscr)
 
     def menu_hud(stdscr):
         menu_string = "1 - Area\n2 - Move\n3 - Rest\n4 - Gear\n5 - Study\n6 - Exit"
@@ -448,6 +453,11 @@ class Game:
         Game.stat_hud(self, stdscr)
         Game.event_hud(stdscr)
         
+    def draw_magic_hud(self, stdscr):
+        Game.redraw_attack_ui(self, stdscr)
+        CursesFunctions.curses_center(stdscr, design.magic_ascii, 10, 0)
+        
+    
     def move(player_node, direction, stdscr):
         while True:
             if direction.lower() == 'f':
@@ -549,13 +559,13 @@ class Game:
         self.player_level_progress += xp_gain
         # CursesFunctions.curses_center(stdscr, f"You Gained {xp_gain}", 10, 0)
 
-    def player_life_check(self, stdscr, game_state):
+
+    def player_life_check(self, stdscr):
         if self.player.health <= 0:
             stdscr.clear()
             CursesFunctions.curses_center(stdscr, design.skull_2_ascii, 0, 0)
             stdscr.getch()
-            game_state = 'restart'
-        return game_state
+            raise RestartException()
 
     def rest(self, stdscr):
         Game.inventory_hud(self, stdscr)

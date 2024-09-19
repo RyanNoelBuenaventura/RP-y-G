@@ -8,21 +8,32 @@ import design
 class RestartException(Exception):
     pass
 
+# NORMAL MAIN
+# comment out main below for normal use
+# this main does not display traceback error information
 def main(stdscr):
     #stdscr = curses.initscr()
     design.AttributeManager.initialize_attribute
-    #game_state = 'running'
     while True:
-        game_state = 'running'
         try:
             game = program_loop.Game()
             game.generate_world()
             game.start_game(stdscr)
-            game.menu(stdscr, game_state)
+            game.menu(stdscr)
         except Exception as e:
-            #stdscr.clear()
             continue
-    
+
+# DEBUGGING MAIN
+# comment out above main for debugging
+# this main does display traceback error information
+# def main(stdscr):
+#     design.AttributeManager.initialize_attribute
+#     while True:
+#             game = program_loop.Game()
+#             game.generate_world()
+#             game.start_game(stdscr)
+#             game.menu(stdscr)
+
 if __name__ == "__main__":
     keyboard.press_and_release('f11')
     curses.wrapper(main)

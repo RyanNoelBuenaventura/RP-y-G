@@ -5,6 +5,7 @@ from character.inventory import Inventory
 from .curses_functions import *
 from program_loop.item import Item
 from design.ascii import study_ascii
+from design.ascii import magic_ascii
 
 class Magic:
     def __init__(self, character):
@@ -24,18 +25,22 @@ class Magic:
     def read(self, inventory, stdscr, reader, item_key, item_index, game):
         if inventory:
             CursesFunctions.curses_center(stdscr, study_ascii, 10, 0)
-            CursesFunctions.curses_center(stdscr, f"Select Item To Read (1-{len(inventory)}) Or Continue To Casting (r)", -1, 0)
+            CursesFunctions.curses_center(stdscr, f"Select Item To Read (1-{len(inventory)}) Or Continue To Casting (c) Or Return (r)", -1, 0)
             read_input = stdscr.getch()
             read_select = CursesFunctions.curses_getch_to_str(stdscr, read_input)
+            if str(read_select).lower() == 'c':
+                return 'c'
             read_select_valid = game.input_validation(inventory, read_select, stdscr)
             if str(read_select_valid).lower() == 'r':
-                return False
+                return 'r'
+
             else:
                 item_index = int(read_select_valid)
                 selected_item_key = Inventory.item_key_retrieve(reader.player_inventory, read_select_valid)
                 selected_item_special = Inventory.item_special_retrieve(reader.player_inventory, read_select_valid)
             learned_spell = None
             Magic.clear_magic_hud(stdscr)
+            CursesFunctions.curses_center(stdscr, study_ascii, 10, 0)
             book_contents = {
                 'healing_book_1': "Bend light to your will in order to mend damage.",
                 'fireball_book_1': "Tame the inigo to be used as a flaming projectile.",
@@ -55,13 +60,13 @@ class Magic:
                         self.add_spell(learned_spell, reader, stdscr)
                     while True:
                         game.redraw_event_hud(stdscr)
+                        CursesFunctions.curses_center(stdscr, study_ascii, 10, 0)
                         CursesFunctions.curses_center(stdscr, "Drop Book (y/n)", -1, 0)
                         drop_input = stdscr.getch()
                         drop_select = CursesFunctions.curses_getch_to_str(stdscr, drop_input)
                         if drop_select.lower() == 'y':
                             # inventory.pop(item_index)
                             from program_loop.event import Event
-
                             dropped_item = reader.player_inventory.drop_item(int(item_index))
                             Event.add_to_loot_event(dropped_item, reader.player_position, stdscr, self)
                             break
@@ -120,6 +125,7 @@ class Magic:
 
     def select_spell(self, game, spell_list, stdscr):
         Magic.clear_magic_hud(stdscr)
+        CursesFunctions.curses_center(stdscr, magic_ascii, 19, 0)
         if len(game.player_spells.spell_array) <= 0:
             CursesFunctions.curses_center(stdscr, "You Know No Spells", -1, 0)
             stdscr.getch()
