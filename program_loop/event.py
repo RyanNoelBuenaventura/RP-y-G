@@ -116,7 +116,6 @@ class Event:
                     return selected_target
             continue
 
-
     def combat_select_target(node, game, max_target, combatant_list, stdscr, event_ascii):
         Game.redraw_event_hud(stdscr)
         Game.redraw_attack_ui(game, stdscr)
@@ -245,6 +244,7 @@ class Event:
                             if flee_chance >= flee_success:
                                 CursesFunctions.curses_center(stdscr, "Flee Success", 1, 0)
                                 game.player.stamina -= random.randint(0, 5)
+                                Game.stat_hud(game, stdscr)
                                 stdscr.getch()
                                 node.flee_occur = True
                                 node.flee_direction = direction

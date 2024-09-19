@@ -92,23 +92,3 @@ class Item:
             game.redraw_lower_hud(stdscr)
         else:
             return
-        
-    # def use_item(self, item_key, game, character_item_list, item_index, stdscr):
-    #     item = None
-    #     if item_key in self.misc_list:
-    #         item = self.misc_list[item_key]
-    #     elif item_key in self.weapon_list:
-    #         item = self.weapon_list[item_key]
-    #     if item is not None:
-    #         if item_key == 'health_potion_1':
-    #             game.player.health += 10
-    #             character_item_list.pop(int(item_index))
-    #         elif item_key == 'stamina_potion_1':
-    #             game.player.stamina += 10
-    #             character_item_list.pop(int(item_index))
-    #         elif item_key == 'mana_potion_1':
-    #             game.player.mana += 10
-    #             character_item_list.pop(int(item_index))
-    #         game.redraw_lower_hud(stdscr)
-    #     else:
-    #         return
