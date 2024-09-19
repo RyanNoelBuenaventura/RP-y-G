@@ -279,7 +279,7 @@ class Game:
             Game.rest(self, stdscr)
             self.menu(stdscr)
         elif self.menu_choice == '4':
-            Game.inventory_interact(self, self.player_position, stdscr)
+            Game.inventory_interact(self, self.player_position, stdscr, None)
             self.menu(stdscr)
         elif self.menu_choice == '5':
             while True:
@@ -373,7 +373,7 @@ class Game:
         except curses.error:
             pass
 
-    def inventory_interact(self, node, stdscr):
+    def inventory_interact(self, node, stdscr, target_list):
         if len(self.player_inventory.item_array) != 0:
             while True:
                 Game.redraw_event_hud(stdscr)
@@ -404,7 +404,7 @@ class Game:
                     continue
                 elif item_use_choice.lower() == 'u':
                     selected_item_key = Inventory.item_key_retrieve(self.player_inventory, item_select)
-                    Item().use_item(selected_item_key, self, self.player_inventory.item_array, item_select, stdscr)
+                    Item().use_item(selected_item_key, self, self.player_inventory.item_array, item_select, stdscr, target_list)
                     continue
                 elif item_use_choice.lower() == 'r':
                     continue

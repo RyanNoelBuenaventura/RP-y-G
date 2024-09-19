@@ -107,13 +107,13 @@ class Event:
             selected_target_input = stdscr.getch()
             selected_target = CursesFunctions.curses_getch_to_str(stdscr, selected_target_input)
             if selected_target == '0':
-                selected_target = 0
-                return selected_target
-            if selected_target == 'r' or selected_target == 'R':
+                return 0
+            if selected_target.lower() == 'r':
                 return None
-            if combatant_list:
+            if selected_target.isdigit() and combatant_list:
                 selected_target = Game.input_validation(combatant_list, selected_target, stdscr)
-                return selected_target
+                if selected_target is not None:
+                    return selected_target
             continue
 
 
@@ -271,7 +271,7 @@ class Event:
             elif event_choice == '3':
                 item_amount = len(game.player_inventory.item_array)
                 #selected_item = Event.items_interact(node, game, item_amount, stdscr)
-                Game.inventory_interact(game, node, stdscr)
+                Game.inventory_interact(game, node, stdscr, node.combatant_character_list)
             elif event_choice == '4':
                 while True:
                     selected_target = Event.combat_select_target(node, game, node.combatant_amount, node.combatant_character_list, stdscr, event_ascii)
